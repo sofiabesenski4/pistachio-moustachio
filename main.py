@@ -81,7 +81,7 @@ def get_pdf_paths(directory_name):
 			pdf_paths.append(os.path.join(directory_name, pdf))	
 	return pdf_paths
 """
-strip_dates:
+strip_dates: to be used when given a list of potential dates
 input: date_list= a list of found dates from the CoreNLP NER engine. can be in multiple different formats, and can contain extra numbers or characters
 	   regex_pattern= a pre-compiled regex pattern which is used to filter out any "dates" retreived that aren't valid DOB candidates due to format, relative dating, etc..
 	   valid_dates= a list of dates which have already been determined valid
@@ -101,20 +101,22 @@ def strip_dates(date_list, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDY
 				"02":2,"03":3,"04":4,"05":5,"06":6,"07":7,"08":8,"09":9,"10":10,"11":11,"12":12}
 
 	if DDMMYYYY:
-		print("DDMMYYYY")
-		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(3)],re.search(regex_pattern, element).group(2))) for element in date_list if re.search(regex_pattern, element)]
-		print(str(valid_dates))
+		#print("DDMMYYYY")
+		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(3)],re.search(regex_pattern, element).group(2))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict)]
+		#print(str(valid_dates))
 	elif YYYYMMDD:
-		print("YYYYMMDD")
-		[valid_dates.append((re.search(regex_pattern, element).group(2),month_dict[re.search(regex_pattern, element).group(3)],re.search(regex_pattern, element).group(4))) for element in date_list if re.search(regex_pattern, element)]
-		print(str(valid_dates))
+		#print("YYYYMMDD")
+		[valid_dates.append((re.search(regex_pattern, element).group(2),month_dict[re.search(regex_pattern, element).group(3)],re.search(regex_pattern, element).group(4))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict) ]
+		#print(str(valid_dates))
 	elif MMDDYYYY:
-		print("MMDDYYYY")
-		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(2)],re.search(regex_pattern, element).group(3))) for element in date_list if re.search(regex_pattern, element)]
-		print(str(valid_dates))
+		#print("MMDDYYYY")
+		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(2)],re.search(regex_pattern, element).group(3))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(2) in month_dict)]
+		#print(str(valid_dates))
 	return valid_dates
 	
-
+"""
+find_dates: to be used on the entire text file extracted from the pdfs
+"""
 def find_dates(text, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 	# pattern DDMMYYYY_date_strip should strip away any unnecessary numbers, before or after a date.
 	#ie: "2 1995 May-10" could be annotated as a date if the OCR recognized "Page 2 1995 May-10" in the pdf
@@ -128,18 +130,18 @@ def find_dates(text, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 				"02":2,"03":3,"04":4,"05":5,"06":6,"07":7,"08":8,"09":9,"10":10,"11":11,"12":12}
 
 	if DDMMYYYY:
-		print("DDMMYYYY")
+		#print("DDMMYYYY")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[3],month_dict[element[2]],element[1])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
-		print(str(valid_dates))
+		[valid_dates.append((element[4],month_dict[element[3]],element[2])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[3] in month_dict]
+		#print(str(valid_dates))
 	elif YYYYMMDD:
-		print("YYYYMMDD")
-		[valid_dates.append((element[1],month_dict[element[2]],element[3])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
-		print(str(valid_dates))
+		#print("YYYYMMDD")
+		[valid_dates.append((element[2],month_dict[element[3]],element[4])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[3] in month_dict]
+		#print(str(valid_dates))
 	elif MMDDYYYY:
-		print("MMDDYYYY")
-		[valid_dates.append((element[3],month_dict[element[1]],element[2])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[1] in month_dict]
-		print(str(valid_dates))
+		#print("MMDDYYYY")
+		[valid_dates.append((element[4],month_dict[element[2]],element[3])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
+		#print(str(valid_dates))
 	
 	return valid_dates
 
@@ -221,19 +223,19 @@ def main():
 		
 		valid_dates = []
 		#each of these strip_dates function calls appends each valid date match to the valid_dates list
-		#strip_dates(per_day_num[1],compiled_DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
-		#strip_dates(per_day_num[1],compiled_YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
-		#strip_dates(per_day_num[1],compiled_MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
+		strip_dates(per_day_num[1],DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
+		strip_dates(per_day_num[1],YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
+		strip_dates(per_day_num[1],MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
 		find_dates(text,DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
 		find_dates(text,YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
 		find_dates(text,MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
-		found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<31]
+		found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32]
 		
 	#	print("PERSON list :",str(per_day_num[0]))
 	#	print("CoreNLP's DATE list: ", str(per_day_num[1]))
 	#	print("NUMBER list: ", str(per_day_num[2]))
 	#	print("Regular expression's DATES list:", str(valid_dates))
-		#print("Datetime.date objects: ", str(found_datetimes))
+	#	print("Datetime.date objects: ", str(found_datetimes))
 	#	print("VALID PHN list: ", PHN_identifier(per_day_num[2],compiled_PHN_pat))
 	#	print("PATIENT HYPOTHESIS from highest frequency: " , patient_hypothesis(per_day_num[0]))
 		fp.write("{}\nTest case #{} processed".format(str(pdf_path),index))
@@ -241,7 +243,7 @@ def main():
 		fp.write("Person List: "+ str(per_day_num[0])+"\n\n")
 		fp.write("CoreNLP's Date List: "+ str(per_day_num[1])+"\n\n")
 		fp.write("Number list: "+ str(per_day_num[2])+"\n\n")
-		fp.write("Regular Expr Found Date List: "+ str(valid_dates)+"\n\n")
+		fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
 		fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
 		db= db_interaction.make_connection_to_db(database_name)
 	#	print("Matches crossreferencing the DOB vs PHN:\n" , str(db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes)))
