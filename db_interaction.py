@@ -43,12 +43,12 @@ Inputs: db_ptr: a pointer to a PyGreSQL database object.
 def insert_patient_into_db(db_ptr, new_patient_first_name,new_patient_last_name,new_patient_dob_datetime_obj,new_patient_phn):
 	
 	try:
-		assert "public.patients" in db_ptr.get_tables()
+		assert "public.iclinic_data" in db_ptr.get_tables()
 	except AssertionError:
-		print("could not find public.patients db in patients_db_test on system")
+		print("could not find public.iclinic_data db in patient_data on system")
 		return
 	try:
-		assert "dob" and "phn" and "first_name" and "last_name" in db_ptr.get_attnames("public.patients")
+		assert "dob" and "phn" and "first_name" and "last_name" in db_ptr.get_attnames("public.iclinic_data")
 	except AssertionError:
 		print("could not find required column names: dob, phn, first_name, or last_name")
 		return
@@ -59,7 +59,7 @@ def insert_patient_into_db(db_ptr, new_patient_first_name,new_patient_last_name,
 		return
 	"""
 	try:
-		db_ptr.insert("public.patients",first_name=new_patient_first_name, last_name= new_patient_last_name,dob = new_patient_dob_datetime_obj,phn = new_patient_phn)
+		db_ptr.insert("public.iclinic_data",first_name=new_patient_first_name, last_name= new_patient_last_name,dob = new_patient_dob_datetime_obj,phn = new_patient_phn)
 	except:
 		print("phn {} already exists in database, cannot insert a duplicate".format(new_patient_phn))
 	return
@@ -69,16 +69,16 @@ Basically the above function, but for DB.inserttable, not DB.insert
 def insert_patient_tuples_into_db(db_ptr, patient_tuples):
 	#tuples are of the form: (new_patient_phn,new_patient_first_name,new_patient_last_name,new_patient_dob_datetime_obj)
 	try:
-		assert "public.patients" in db_ptr.get_tables()
+		assert "public.iclinic_data" in db_ptr.get_tables()
 	except AssertionError:
-		print("could not find public.patients db in patients_db_test on system")
+		print("could not find public.iclinic_data db in patient_data on system")
 		return
 	try:
-		assert  "phn" and "first_name" and "last_name" and "dob" in db_ptr.get_attnames("public.patients")
+		assert  "phn" and "first_name" and "last_name" and "dob" in db_ptr.get_attnames("public.iclinic_data")
 	except AssertionError:
 		print("could not find required column names: dob, phn, first_name, or last_name")
 		return
-	db_ptr.inserttable("public.patients",patient_tuples)
+	db_ptr.inserttable("public.iclinic_data",patient_tuples)
 	return
 
 """
@@ -128,9 +128,9 @@ def PHN_vs_DOB_vs_partial_name_query(db_ptr, found_PHNs, found_datetime_objs, fo
 	db_ptr.inserttable("public.found_phns", found_PHN_table)
 	db_ptr.inserttable("public.found_dobs", found_DOB_table)
 	db_ptr.inserttable("public.found_partial_names", found_partial_name_table)
-	ret_val =  db_ptr.query("""select * from patients, found_phns, found_dobs, found_partial_names 
-								where patients.phn=found_phns.phn and found_dobs.dob = patients.dob
-								and (found_partial_names.partial_name = patients.first_name or found_partial_names.partial_name=patients.last_name);""") 
+	ret_val =  db_ptr.query("""select * from iclinic_data, found_phns, found_dobs, found_partial_names 
+								where iclinic_data.phn=found_phns.phn and found_dobs.dob = iclinic_data.dob
+								and (found_partial_names.partial_name = iclinic_data.first_name or found_partial_names.partial_name=iclinic_data.last_name);""") 
 	#dropping the tables we made to crossreference DOB vs PHN in the public.patients table
 	db_ptr.query("DROP TABLE found_phns;")
 	db_ptr.query("DROP TABLE found_dobs;")
@@ -184,8 +184,8 @@ def PHN_vs_DOB_query(db_ptr, found_PHNs, found_datetime_objs):
 #	print(found_DOB_table)
 	db_ptr.inserttable("public.found_phns", found_PHN_table)
 	db_ptr.inserttable("public.found_dobs", found_DOB_table)
-	ret_val =  db_ptr.query("""select * from patients, found_phns, found_dobs
-									where patients.phn=found_phns.phn and found_dobs.dob = patients.dob;""") 
+	ret_val =  db_ptr.query("""select * from iclinic_data, found_phns, found_dobs
+									where iclinic_data.phn=found_phns.phn and found_dobs.dob = iclinic_data.dob;""") 
 	#dropping the tables we made to crossreference DOB vs PHN in the public.patients table
 	db_ptr.query("DROP TABLE found_phns;")
 	db_ptr.query("DROP TABLE found_dobs;")
@@ -225,9 +225,9 @@ def PHN_vs_partial_name_query(db_ptr, found_PHNs, found_full_names):
 	found_partial_name_table = [tuple([found_partial_name, index ]) for index,found_partial_name in enumerate(partial_name_list)]
 	db_ptr.inserttable("public.partial_names", found_partial_name_table)
 	db_ptr.inserttable("public.found_phns", found_PHN_table)
-	ret_val = db_ptr.query("""SELECT * from public.patients, public.partial_names, public.found_phns
-								where (partial_names.part_name = patients.first_name or partial_names.part_name=patients.last_name)
-									and (public.patients.phn = found_phns.found_phn); """)
+	ret_val = db_ptr.query("""SELECT * from public.iclinic_data, public.partial_names, public.found_phns
+								where (partial_names.part_name = iclinic_data.first_name or partial_names.part_name=iclinic_data.last_name)
+									and (public.iclinic_data.phn = found_phns.found_phn); """)
 	#print(db_ptr.query("SELECT * from partial_names"))
 	#print(db_ptr.query("SELECT * from found_phns"))
 	db_ptr.query("DROP table partial_names;")
@@ -265,9 +265,9 @@ def DOB_vs_partial_name_query(db_ptr, found_datetime_objs, found_full_names):
 #	print(found_DOB_table)
 	db_ptr.inserttable("public.found_dobs", found_DOB_table)
 	db_ptr.inserttable("public.found_partial_names", found_partial_name_table)
-	ret_val =  db_ptr.query("""select * from patients, found_dobs, found_partial_names 
-								where found_dobs.dob = patients.dob
-								and (found_partial_names.partial_name = patients.first_name or found_partial_names.partial_name=patients.last_name);""") 
+	ret_val =  db_ptr.query("""select * from iclinic_data, found_dobs, found_partial_names 
+								where found_dobs.dob = iclinic_data.dob
+								and (found_partial_names.partial_name = iclinic_data.first_name or found_partial_names.partial_name=iclinic_data.last_name);""") 
 	#dropping the tables we made to crossreference DOB vs partial name match in the public.patients table
 	
 	db_ptr.query("DROP TABLE found_dobs;")
@@ -286,8 +286,8 @@ def PHN_query(db_ptr, found_PHNs):
 	
 	found_PHN_table = [tuple([x,phn_index]) for phn_index,x in enumerate(found_PHNs)]
 	db_ptr.inserttable("public.found_phns", found_PHN_table)
-	ret_val = db_ptr.query("""SELECT * from public.patients, public.found_phns
-								where (public.patients.phn = found_phns.found_phn); """)
+	ret_val = db_ptr.query("""SELECT * from public.iclinic_data, public.found_phns
+								where (public.iclinic_data.phn = found_phns.found_phn); """)
 	#print(db_ptr.query("SELECT * from partial_names"))
 	#print(db_ptr.query("SELECT * from found_phns"))
 	
