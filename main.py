@@ -132,15 +132,17 @@ def find_dates(text, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 	if DDMMYYYY:
 		#print("DDMMYYYY")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[4],month_dict[element[3]],element[2])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[3] in month_dict]
+		[valid_dates.append((element[3],month_dict[element[2]],element[1])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
 		#print(str(valid_dates))
 	elif YYYYMMDD:
 		#print("YYYYMMDD")
-		[valid_dates.append((element[2],month_dict[element[3]],element[4])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[3] in month_dict]
+		#print(regex_pattern.findall(text))
+		[valid_dates.append((element[1],month_dict[element[2]],element[3])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
 		#print(str(valid_dates))
 	elif MMDDYYYY:
 		#print("MMDDYYYY")
-		[valid_dates.append((element[4],month_dict[element[2]],element[3])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
+		#print(regex_pattern.findall(text))
+		[valid_dates.append((element[3],month_dict[element[1]],element[2])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[1] in month_dict]
 		#print(str(valid_dates))
 	
 	return valid_dates
@@ -207,7 +209,7 @@ def main():
 
 	DDMMYYYY_date_pattern = r'((?<!\d\d)(\d{1,2})[^\na-zA-Z0-9]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{4}))'
 	YYYYMMDD_date_pattern = r'((\d{4})[^\n\w]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\n\w]+(\d{1,2}))'
-	MMDDYYYY_date_pattern = r'((January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{1,2})[^\na-zA-Z0-9]+(\d{4}))'
+	MMDDYYYY_date_pattern = r'((\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{1,2})[^\na-zA-Z0-9]+(\d{4}))'
 	compiled_DDMMYYYY_date_pattern = re.compile(DDMMYYYY_date_pattern)	
 	compiled_YYYYMMDD_date_pattern = re.compile(YYYYMMDD_date_pattern)
 	compiled_MMDDYYYY_date_pattern = re.compile(MMDDYYYY_date_pattern)
