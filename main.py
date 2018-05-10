@@ -66,11 +66,6 @@ import datetime
 import Interact_with_Server as interact
 import PDF_To_TXT as p2t
 
-#
-class DATE_MODE(Enum):
-	DDMMYYYY = 1
-	MMDDYYYY = 2
-	YYYYMMDD = 3
 	
 #initializing a dictionary to simplify recognizing the different date formats:
 #DATE_MODES = {"DDMMYYYY":1,"MMDDYYYY":2,"YYYYMMDD":3}
@@ -216,6 +211,9 @@ def main():
 	compiled_PHN_pat = re.compile(PHN_pattern)
 	corenlp_ptr = interact.init_corenlp()
 	for index,pdf_path in enumerate(pdf_list):
+		#this is to skip the first 20 test files because execution was stopped at 21.pdf
+		if index < 83:
+			continue
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		text = p2t.convert_pdf_to_txt(pdf_path)
@@ -231,7 +229,7 @@ def main():
 		find_dates(text,DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
 		find_dates(text,YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
 		find_dates(text,MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
-		found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32]
+		found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
 		
 	#	print("PERSON list :",str(per_day_num[0]))
 	#	print("CoreNLP's DATE list: ", str(per_day_num[1]))

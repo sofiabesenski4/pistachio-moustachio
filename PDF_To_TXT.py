@@ -40,7 +40,8 @@ def convert_pdf_to_txt(pdf_path):
 		image.save(str(i) + ".jpg")
 		#print(str(i)+".jpg")
 		image_list.append(str(i)+".jpg")
-		
+		if i>14:
+			break
 
 
 	output_strings = []
