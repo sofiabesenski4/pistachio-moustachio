@@ -31,7 +31,7 @@ convert_pdf_to_txt(pdf_path):
 input: pdf_path = the path, relative to the pwd, to the pdf we want to perform OCR on.
 output: 
 """
-def convert_pdf_to_txt(pdf_path):
+def convert_pdf_to_txt(pdf_path, degrees_of_rotation=None):
 	images = convert_from_path(pdf_path)
 	#(amazingly) simply implementation(??)
 	
@@ -42,8 +42,11 @@ def convert_pdf_to_txt(pdf_path):
 		image_list.append(str(i)+".jpg")
 		if i>14:
 			break
+	return ocr_images(image_list, degrees_of_rotation)
 
 
+	
+def ocr_images(image_list, degrees_rotation = None):
 	output_strings = []
 	#loading image and convert to grayscale
 	for image_name in image_list:
@@ -53,6 +56,8 @@ def convert_pdf_to_txt(pdf_path):
 		#cv2.imshow("img,",image)
 		#gray  = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
 		gray = Image.open(os.path.join(os.getcwd(), image_name))
+		if degrees_rotation!= None:
+			gray = gray.rotate(degrees_rotation)
 		gray = gray.point(lambda x: 0 if x<200 else 255)
 		"""HERE IS WHERE WE CAN ADD IN OUR OWN FILTERS/PREPROCESSING EFFECTS TO INCREASE OCR ACCURACY DEPENDING ON DATA
 		"""
@@ -72,7 +77,7 @@ def convert_pdf_to_txt(pdf_path):
 		#cv2.imwrite(filename,gray)
 
 
-		#we can finally apply tesseract to the saved image using python bindings, while removing the temp image from disk
+		#we can finally apply tesseract to the saved image using python bindings, while removing the temp image from memory
 		text = pytesseract.image_to_string(gray)
 		print(text)
 		#os.remove(filename)
