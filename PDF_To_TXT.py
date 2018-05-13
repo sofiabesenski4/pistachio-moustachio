@@ -31,7 +31,7 @@ convert_pdf_to_txt(pdf_path):
 input: pdf_path = the path, relative to the pwd, to the pdf we want to perform OCR on.
 output: 
 """
-def convert_pdf_to_txt(pdf_path, degrees_of_rotation=None):
+def convert_pdf_to_txt(pdf_path, degrees_of_rotation):
 	images = convert_from_path(pdf_path)
 	#(amazingly) simply implementation(??)
 	
@@ -46,7 +46,7 @@ def convert_pdf_to_txt(pdf_path, degrees_of_rotation=None):
 
 
 	
-def ocr_images(image_list, degrees_rotation = None):
+def ocr_images(image_list, degrees_rotation):
 	output_strings = []
 	#loading image and convert to grayscale
 	for image_name in image_list:
@@ -56,7 +56,7 @@ def ocr_images(image_list, degrees_rotation = None):
 		#cv2.imshow("img,",image)
 		#gray  = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
 		gray = Image.open(os.path.join(os.getcwd(), image_name))
-		if degrees_rotation!= None:
+		if degrees_rotation!= 0:
 			gray = gray.rotate(degrees_rotation)
 		gray = gray.point(lambda x: 0 if x<200 else 255)
 		"""HERE IS WHERE WE CAN ADD IN OUR OWN FILTERS/PREPROCESSING EFFECTS TO INCREASE OCR ACCURACY DEPENDING ON DATA
