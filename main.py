@@ -13,7 +13,7 @@ with that server, returning the output of the annotations.
 
 The following command will start the server, from inside the corenlp folder:
 
-java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,ssplit,pos,lemma,parse,ner" -port 9000 -timeout 30000
+java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,ssplit,pos,lemma,parse,ner" -port 9000 -timeout 3000
 
 PROGRAM FLOW:
 
@@ -127,17 +127,17 @@ def find_dates(text, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 	if DDMMYYYY:
 		#print("DDMMYYYY")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[3],month_dict[element[2]],element[1])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
+		[valid_dates.append((element[3],month_dict[element[2]],element[1])) for element in re.findall(regex_pattern,text) if element[2] in month_dict]
 		#print(str(valid_dates))
 	elif YYYYMMDD:
 		#print("YYYYMMDD")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[1],month_dict[element[2]],element[3])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[2] in month_dict]
+		[valid_dates.append((element[1],month_dict[element[2]],element[3])) for element in re.findall(regex_pattern,text) if element[2] in month_dict]
 		#print(str(valid_dates))
 	elif MMDDYYYY:
 		#print("MMDDYYYY")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[3],month_dict[element[1]],element[2])) for element in re.findall(regex_pattern,text, flags =re.IGNORECASE) if element[1] in month_dict]
+		[valid_dates.append((element[3],month_dict[element[1]],element[2])) for element in re.findall(regex_pattern,text) if element[1] in month_dict]
 		#print(str(valid_dates))
 	
 	return valid_dates
@@ -174,20 +174,119 @@ YYYYMMDD_date_pattern = r'(\d{4}[\s\W]*(?:\d{1,2}|January|February|March|April|M
 	#but also with a negative lookahead, so it will not match if there is a digit occuring after this second half of the or statement
 	# prioritizing matches which have fewer delimiting characters
 	
+	"""
+Function: patient_hypothesis(matches)	
+INPUT:
+	a tuple of lists of tuples: a tuple of A matches, B matches, C matches and D matches. Each X matches is a list of patient tuples, who matched in this category
+														
+	([(PHN,first_name,last_name,DOB),(),.....],[().....],[().....],[()......])
 	
-def patient_hypothesis(name_list):
+OUTPUT:
+	a tuple: (Status, Match/None)
+	status = "Multiple Matches of X" or ""
+	 
+	"""
+
+def patient_hypothesis(matches):
+	#if there is at least one match, then find the highest rating match(es) and return them as the most likely patient
 	
-	return ("Patient Name: " + max(name_list, key=name_list.count))
+	if matches[0] or matches[1] or matches[2] or matches[3]:
+		if matches[0]:
+			if len(matches)>1:
+				#print("Matches: ",matches[0])
+				return ("Multiple A Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[0].getresult()]))))
+			else:
+				return ("A",str(matches[0][0]))
+		elif matches[1]:
+			if len(matches)>1:
+				return ("Multiple B Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[1].getresult()]))))
+			else:
+				return ("B",str(matches[1][0]))
+		elif matches[2]:
+			if len(matches)>1:
+				return ("Multiple C Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[2].getresult()]))))
+			else:
+				return ("C",str(matches[2][0]))
+		else:
+			if len(matches)>1:
+				return ("Multiple D Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[3].getresult()]))))
+			else:
+				return ("D",str(matches[3][0]))
+		
+	return (None,None)
 
 """
-Function: create_list_from_annotations:
-input: annotation_list: a list of tuples of form ("word/token","annotation keyword")
-	   desired_annotation: a string which represents the annotatiion which we filter for to build an output list
-output: a list of elements which were annotated with the "desired_annotation" tag. 
-		Elements adjacent to each other, with the same "desired_annotation" tag, are concatenated together to form one list element.
-		
-		
+Function: process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotation,
+						fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+
+IDEA: main functionality of this program is excecuted within this function. 
+
+Input: index = index of the sample being processed
+	   pdf_path = path to the sample pdf in the form of a string
+	   database_name = database name being accessed
+	   corenlp_ptr = ptr to the interface for Stanford's CoreNLP engine, for NER functionality
+	   degrees_of_rotation = number of degrees the pdfs should be rotated, in CCW direction 
+	   compiled_DDMMYYY/YYYYMMDD/MMDDYYYY_patterns = compiled regex patterns for use in identifying dates in common formats within the sample
+	   compiled_PHN_pat = compiled regex pattern to recognize 10 digit PHNs in the document, potentially removing separating characters
+Output: a patient_hypothesis tuple of the form (<match status>/None, <patient(s) information>/None)
+
+
 """
+def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat):
+	
+	
+	text = p2t.convert_pdf_to_txt(pdf_path, degrees_of_rotation)
+		
+	#per_day_num = tuple:(PERSON[], DATE[], NUMBER[])
+	per_day_num = interact.annotate_ner_with_corenlp(text.replace(",",""), corenlp_ptr)
+		
+	valid_dates = []
+	#each of these strip_dates function calls appends each valid date match to the valid_dates list
+	strip_dates(per_day_num[1],compiled_DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
+	strip_dates(per_day_num[1],compiled_YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
+	strip_dates(per_day_num[1],compiled_MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
+	find_dates(text,compiled_DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
+	find_dates(text,compiled_YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
+	find_dates(text,compiled_MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
+	found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
+		
+		
+	"""
+	#print("PERSON list :",str(per_day_num[0]))
+	#print("CoreNLP's DATE list: ", str(per_day_num[1]))
+	#print("NUMBER list: ", str(per_day_num[2]))
+	#print("Regular expression's DATES list:", str(valid_dates))
+	#print("Datetime.date objects: ", str(found_datetimes))
+	#print("VALID PHN list: ", PHN_identifier(per_day_num[2],compiled_PHN_pat))
+	#print("PATIENT HYPOTHESIS from highest frequency: " , patient_hypothesis(per_day_num[0]))
+	"""
+		
+	fp.write("{}\nTest case #{} processed: ".format(str(pdf_path),index))
+	fp.write("Person List: "+ str(per_day_num[0])+"\n\n")
+	fp.write("CoreNLP's Date List: "+ str(per_day_num[1])+"\n\n")
+	fp.write("Number list: "+ str(per_day_num[2])+"\n\n")
+	fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
+	fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
+
+	db= db_interaction.make_connection_to_db(database_name)
+
+	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0])
+	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes)
+	PHN_vs_partial_name_results = db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0])
+	DOB_vs_partial_name_results = db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0])
+
+	#This patient prediction is the variable which should be used to determine where the sample gets filed
+	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results))
+
+	fp.write("\nPatient Hypothesis: " + str(patient_prediction_result))
+	fp.write("\nA: Matches crossreferencing the PHN vs DOB vs partial found names\n" + str(PHN_vs_DOB_vs_partial_name_results))
+	fp.write("\nB: Matches crossreferencing the PHN vs DOB:\n" + str(PHN_vs_DOB_results))
+	fp.write("\nC: Matches crossreferencing the PHN vs partial found names:\n" + str(PHN_vs_partial_name_results))
+	fp.write("\nD: Matches crossreferencing the DOB vs partial found names:\n" + str(PHN_vs_DOB_results))
+	return patient_prediction_result
+
+
+
 def main():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("--f","--folder", required = True)
@@ -195,7 +294,7 @@ def main():
 	args = ap.parse_args()
 
 	
-
+	
 	#from stack overflow : https://stackoverflow.com/questions/3964681/find-all-files-in-a-directory-with-extension-txt-in-python
 	#getting the names of all the files stored within that folder
 	pdf_list = get_pdf_paths(str(args.f))
@@ -205,56 +304,25 @@ def main():
 	DDMMYYYY_date_pattern = r'((?<!\d\d)(\d{1,2})[^\na-zA-Z0-9]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{4}))'
 	YYYYMMDD_date_pattern = r'((\d{4})[^\n\w]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\n\w]+(\d{1,2}))'
 	MMDDYYYY_date_pattern = r'((\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{1,2})[^\na-zA-Z0-9]+(\d{4}))'
-	compiled_DDMMYYYY_date_pattern = re.compile(DDMMYYYY_date_pattern)	
-	compiled_YYYYMMDD_date_pattern = re.compile(YYYYMMDD_date_pattern)
-	compiled_MMDDYYYY_date_pattern = re.compile(MMDDYYYY_date_pattern)
+	compiled_DDMMYYYY_date_pattern = re.compile(DDMMYYYY_date_pattern, flags = re.IGNORECASE)	
+	compiled_YYYYMMDD_date_pattern = re.compile(YYYYMMDD_date_pattern, flags = re.IGNORECASE)
+	compiled_MMDDYYYY_date_pattern = re.compile(MMDDYYYY_date_pattern, flags = re.IGNORECASE)
 	compiled_PHN_pat = re.compile(PHN_pattern)
 	corenlp_ptr = interact.init_corenlp()
+
 	for index,pdf_path in enumerate(pdf_list):
-		#this is to skip the first 20 test files because execution was stopped at 21.pdf
-		if index < 83:
-			continue
-		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
-		text = p2t.convert_pdf_to_txt(pdf_path)
-		
-		#tuple: (PERSON[], DATE[], NUMBER[])
-		per_day_num = interact.annotate_ner_with_corenlp(text.replace(",",""), corenlp_ptr)
-		
-		valid_dates = []
-		#each of these strip_dates function calls appends each valid date match to the valid_dates list
-		strip_dates(per_day_num[1],DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
-		strip_dates(per_day_num[1],YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
-		strip_dates(per_day_num[1],MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
-		find_dates(text,DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
-		find_dates(text,YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
-		find_dates(text,MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
-		found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
-		
-	#	print("PERSON list :",str(per_day_num[0]))
-	#	print("CoreNLP's DATE list: ", str(per_day_num[1]))
-	#	print("NUMBER list: ", str(per_day_num[2]))
-	#	print("Regular expression's DATES list:", str(valid_dates))
-	#	print("Datetime.date objects: ", str(found_datetimes))
-	#	print("VALID PHN list: ", PHN_identifier(per_day_num[2],compiled_PHN_pat))
-	#	print("PATIENT HYPOTHESIS from highest frequency: " , patient_hypothesis(per_day_num[0]))
-		fp.write("{}\nTest case #{} processed".format(str(pdf_path),index))
-		
-		fp.write("Person List: "+ str(per_day_num[0])+"\n\n")
-		fp.write("CoreNLP's Date List: "+ str(per_day_num[1])+"\n\n")
-		fp.write("Number list: "+ str(per_day_num[2])+"\n\n")
-		fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
-		fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
-		db= db_interaction.make_connection_to_db(database_name)
-	#	print("Matches crossreferencing the DOB vs PHN:\n" , str(db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes)))
-	#	print("\nMatches crossreferencing the PHN vs partial found names:\n" + str(db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0])))
-	#	print("\nMatches crossreferencing the DOB vs partial found names:\n" + str(db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0])))
-	#	print("\nMatches crossreferencing the PHN vs DOB vs partial found names\n" + str(db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0])))
-		fp.write("\nMatches crossreferencing the DOB vs PHN:\n" + str(db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes)))
-		fp.write("\nMatches crossreferencing the PHN vs partial found names:\n" + str(db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0])))
-		fp.write("\nMatches crossreferencing the DOB vs partial found names:\n" + str(db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0])))
-		fp.write("\nMatches crossreferencing the PHN vs DOB vs partial found names\n" + str(db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0])))
-		fp.write("\nMatches referencing only the PHN\n" + str(db_interaction.PHN_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat))))
-		fp.close()
+		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
+		degrees_of_rotation = 0
+		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
+											compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+		#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
+		if not patient_prediction_result:
+			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process")
+			degrees_of_rotation = 180
+			process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+			fp.close()
+		else:
+			fp.close()
 if __name__ == "__main__":
 	main()

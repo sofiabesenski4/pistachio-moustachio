@@ -87,12 +87,8 @@ IDea: check the database to find a match of
 """
 
 def PHN_vs_DOB_vs_partial_name_query(db_ptr, found_PHNs, found_datetime_objs, found_full_names):
-	if len(found_PHNs) == 0:
-		return "missing one or more of the fields"
-	if len(found_datetime_objs) == 0:
-		return "missing one or more of the fields"
-	if len(found_full_names) == 0:
-		return "missing one or more of the fields"
+	if len(found_PHNs) == 0 or len(found_datetime_objs) == 0 or len(found_full_names):
+		return None
 	#these temp tables could have already been made, and if so, drop them and reinstantiate them 
 	try:
 		db_ptr.query("CREATE TABLE found_phns(phn text PRIMARY KEY, index integer UNIQUE);")
@@ -154,10 +150,8 @@ Output: returns a string which represents rows from the public.patients table wh
 	   
 """
 def PHN_vs_DOB_query(db_ptr, found_PHNs, found_datetime_objs):
-	if len(found_PHNs) == 0:
-		return "missing one or more of the fields"
-	if len(found_datetime_objs) == 0:
-		return "missing one or more of the fields"
+	if len(found_PHNs) == 0 or len(found_datetime_objs) == 0:
+		return None
 	
 	#these temp tables could have already been made, and if so, drop them and reinstantiate them 
 	try:
@@ -199,10 +193,8 @@ IDEA: given the names and potential (10 digit) PHNs found in a pdf document, che
 		found_full_names
 """
 def PHN_vs_partial_name_query(db_ptr, found_PHNs, found_full_names):
-	if len(found_PHNs) == 0:
-		return "missing one or more of the fields"
-	if len(found_full_names) == 0:
-		return "missing one or more of the fields"
+	if len(found_PHNs) == 0 or len(found_full_names) == 0:
+		return None
 	partial_name_list = []
 	[[partial_name_list.append(part_name) for part_name in full_name.strip().split(" ")] for full_name in found_full_names]
 	#print(partial_name_list)
@@ -235,10 +227,8 @@ def PHN_vs_partial_name_query(db_ptr, found_PHNs, found_full_names):
 	return ret_val
 	
 def DOB_vs_partial_name_query(db_ptr, found_datetime_objs, found_full_names):
-	if len(found_datetime_objs) == 0:
-		return "no matches"
-	if len(found_full_names) == 0:
-		return "no matches"
+	if len(found_datetime_objs) == 0 or len(found_full_names) == 0:
+		return None
 	#these temp tables could have already been made, and if so, drop them and reinstantiate them 	
 	try:
 		db_ptr.query("CREATE TABLE  found_dobs(dob date, found_date_index integer PRIMARY KEY);")
@@ -275,7 +265,7 @@ def DOB_vs_partial_name_query(db_ptr, found_datetime_objs, found_full_names):
 	return ret_val	
 def PHN_query(db_ptr, found_PHNs):
 	if len(found_PHNs) == 0:
-		return "missing one or more of the fields"
+		return None
 	try:
 		db_ptr.query("CREATE TABLE found_phns(found_phn text PRIMARY KEY, phn_index INTEGER UNIQUE)")
 	except:
