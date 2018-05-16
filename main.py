@@ -13,7 +13,7 @@ with that server, returning the output of the annotations.
 
 The following command will start the server, from inside the corenlp folder:
 
-java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,ssplit,pos,lemma,parse,ner" -port 9000 -timeout 3000
+java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,ssplit,pos,lemma,parse,ner" -port 9000 -timeout 30000
 
 PROGRAM FLOW:
 
@@ -65,6 +65,7 @@ import datetime
 #user defined modules
 import Interact_with_Server as interact
 import PDF_To_TXT as p2t
+import time
 
 	
 #initializing a dictionary to simplify recognizing the different date formats:
@@ -97,15 +98,15 @@ def strip_dates(date_list, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDY
 
 	if DDMMYYYY:
 		#print("DDMMYYYY")
-		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(3)],re.search(regex_pattern, element).group(2))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict)]
+		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(3)],regex_pattern.search(element).group(2))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict)]
 		#print(str(valid_dates))
 	elif YYYYMMDD:
 		#print("YYYYMMDD")
-		[valid_dates.append((re.search(regex_pattern, element).group(2),month_dict[re.search(regex_pattern, element).group(3)],re.search(regex_pattern, element).group(4))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict) ]
+		[valid_dates.append((re.search(regex_pattern, element).group(2),month_dict[re.search(regex_pattern, element).group(3)],regex_pattern.search(element).group(4))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict) ]
 		#print(str(valid_dates))
 	elif MMDDYYYY:
 		#print("MMDDYYYY")
-		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(2)],re.search(regex_pattern, element).group(3))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(2) in month_dict)]
+		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(2)],regex_pattern.search(element).group(3))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(2) in month_dict)]
 		#print(str(valid_dates))
 	return valid_dates
 	
@@ -127,17 +128,17 @@ def find_dates(text, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 	if DDMMYYYY:
 		#print("DDMMYYYY")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[3],month_dict[element[2]],element[1])) for element in re.findall(regex_pattern,text) if element[2] in month_dict]
+		[valid_dates.append((element[3],month_dict[element[2]],element[1])) for element in regex_pattern.findall(text) if element[2] in month_dict]
 		#print(str(valid_dates))
 	elif YYYYMMDD:
 		#print("YYYYMMDD")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[1],month_dict[element[2]],element[3])) for element in re.findall(regex_pattern,text) if element[2] in month_dict]
+		[valid_dates.append((element[1],month_dict[element[2]],element[3])) for element in regex_pattern.findall(text) if element[2] in month_dict]
 		#print(str(valid_dates))
 	elif MMDDYYYY:
 		#print("MMDDYYYY")
 		#print(regex_pattern.findall(text))
-		[valid_dates.append((element[3],month_dict[element[1]],element[2])) for element in re.findall(regex_pattern,text) if element[1] in month_dict]
+		[valid_dates.append((element[3],month_dict[element[1]],element[2])) for element in regex_pattern.findall(text) if element[1] in month_dict]
 		#print(str(valid_dates))
 	
 	return valid_dates
@@ -176,31 +177,37 @@ OUTPUT:
 
 def patient_hypothesis(matches):
 	#if there is at least one match, then find the highest rating match(es) and return them as the most likely patient
-	
+	print(str(matches))
 	if matches[0] or matches[1] or matches[2] or matches[3]:
-		if matches[0]:
-			if len(matches)>1:
-				#print("Matches: ",matches[0])
-				return ("Multiple A Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[0].getresult()]))))
+		if matches[0] and len(matches[0].getresult())!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[0].getresult()]))
+			if len(highest_matches)>1:
+				return ("Multiple A Matches",str(highest_matches))
 			else:
-				return ("A",str(matches[0][0]))
-		elif matches[1]:
-			if len(matches)>1:
+				return ("A",str(highest_matches[0]))
+		elif matches[1]and len(matches[1].getresult())!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[1].getresult()]))			
+			if len(highest_matches)>1:
 				return ("Multiple B Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[1].getresult()]))))
 			else:
-				return ("B",str(matches[1][0]))
-		elif matches[2]:
-			if len(matches)>1:
+				return ("B",str(highest_matches[0]))
+		elif matches[2] and len(matches[2].getresult())!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[2].getresult()]))
+			if len(highest_matches)>1:
 				return ("Multiple C Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[2].getresult()]))))
 			else:
-				return ("C",str(matches[2][0]))
-		else:
-			if len(matches)>1:
+				return ("C",str(highest_matches[0]))
+		elif matches[3] and len(matches[3].getresult())!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[3].getresult()]))
+			if len(highest_matches)>1:
+				print(str(matches[3].getresult()))
 				return ("Multiple D Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[3].getresult()]))))
 			else:
-				return ("D",str(matches[3][0]))
-		
-	return (None,None)
+				return ("D",str(highest_matches[0]))
+		else:
+			return ("F",None)
+	
+	return ("F",None)
 
 """
 Function: process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotation,
@@ -264,12 +271,13 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 
 	#This patient prediction is the variable which should be used to determine where the sample gets filed
 	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results))
-
+	
 	fp.write("\nPatient Hypothesis: " + str(patient_prediction_result))
 	fp.write("\nA: Matches crossreferencing the PHN vs DOB vs partial found names\n" + str(PHN_vs_DOB_vs_partial_name_results))
 	fp.write("\nB: Matches crossreferencing the PHN vs DOB:\n" + str(PHN_vs_DOB_results))
 	fp.write("\nC: Matches crossreferencing the PHN vs partial found names:\n" + str(PHN_vs_partial_name_results))
-	fp.write("\nD: Matches crossreferencing the DOB vs partial found names:\n" + str(PHN_vs_DOB_results))
+	fp.write("\nD: Matches crossreferencing the DOB vs partial found names:\n" + str(DOB_vs_partial_name_results))
+	
 	return patient_prediction_result
 
 
@@ -279,7 +287,7 @@ def main():
 	ap.add_argument("--f","--folder", required = True)
 	ap.add_argument("--db","--database",required =True)
 	args = ap.parse_args()
-
+	start_time = time.time()
 	
 	
 	#from stack overflow : https://stackoverflow.com/questions/3964681/find-all-files-in-a-directory-with-extension-txt-in-python
@@ -291,25 +299,30 @@ def main():
 	DDMMYYYY_date_pattern = r'((?<!\d\d)(\d{1,2})[^\na-zA-Z0-9]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{4}))'
 	YYYYMMDD_date_pattern = r'((\d{4})[^\n\w]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\n\w]+(\d{1,2}))'
 	MMDDYYYY_date_pattern = r'((\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{1,2})[^\na-zA-Z0-9]+(\d{4}))'
-	compiled_DDMMYYYY_date_pattern = re.compile(DDMMYYYY_date_pattern, flags = re.IGNORECASE)	
-	compiled_YYYYMMDD_date_pattern = re.compile(YYYYMMDD_date_pattern, flags = re.IGNORECASE)
-	compiled_MMDDYYYY_date_pattern = re.compile(MMDDYYYY_date_pattern, flags = re.IGNORECASE)
+	compiled_DDMMYYYY_date_pattern = re.compile(DDMMYYYY_date_pattern, re.IGNORECASE)	
+	compiled_YYYYMMDD_date_pattern = re.compile(YYYYMMDD_date_pattern,  re.IGNORECASE)
+	compiled_MMDDYYYY_date_pattern = re.compile(MMDDYYYY_date_pattern, re.IGNORECASE)
 	compiled_PHN_pat = re.compile(PHN_pattern)
 	corenlp_ptr = interact.init_corenlp()
-
+	runtime_fp = open("Test_Results/Runtime.txt", "w")
+	
 	for index,pdf_path in enumerate(pdf_list):
+		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
 		degrees_of_rotation = 0
 		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
 											compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
 		#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-		if not patient_prediction_result:
-			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process")
+		if patient_prediction_result[0]=="F":
+			print("Failed to find a patient match, rotating and retrying...")
+			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
 			degrees_of_rotation = 180
 			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
 			fp.close()
 		else:
 			fp.close()
+		runtime_fp.write("\nTest # {}, time elapsed {}".format(str(index), str(time.time()-start_time)))
+		
 if __name__ == "__main__":
 	main()

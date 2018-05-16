@@ -40,7 +40,7 @@ def convert_pdf_to_txt(pdf_path, degrees_of_rotation):
 		image.save(str(i) + ".jpg")
 		#print(str(i)+".jpg")
 		image_list.append(str(i)+".jpg")
-		if i>14:
+		if i>4:
 			break
 	return ocr_images(image_list, degrees_of_rotation)
 
@@ -79,7 +79,7 @@ def ocr_images(image_list, degrees_rotation):
 
 		#we can finally apply tesseract to the saved image using python bindings, while removing the temp image from memory
 		text = pytesseract.image_to_string(gray)
-		print(text)
+		#print(text)
 		#os.remove(filename)
 		output_strings.append(text)
 		os.remove(image_name)
