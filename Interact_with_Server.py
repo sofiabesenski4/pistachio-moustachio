@@ -141,7 +141,7 @@ def annotate_ner_with_corenlp(text, corenlp_ptr):
 	#print ("POS:", sNLP.pos(text),'\n')
 	#print ("Tokens:", sNLP.word_tokenize(text),'\n')
 	#print("NER:" , corenlp_ptr.ner(text))
-	
+	#print(text)
 	names_found = create_list_from_annotations(corenlp_ptr.ner(text),"PERSON")
 	
 	dates_found = create_list_from_annotations(corenlp_ptr.ner(text),"DATE")

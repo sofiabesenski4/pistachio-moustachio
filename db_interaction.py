@@ -87,7 +87,7 @@ IDea: check the database to find a match of
 """
 
 def PHN_vs_DOB_vs_partial_name_query(db_ptr, found_PHNs, found_datetime_objs, found_full_names):
-	if len(found_PHNs) == 0 or len(found_datetime_objs) == 0 or len(found_full_names):
+	if len(found_PHNs) == 0 or len(found_datetime_objs) == 0 or len(found_full_names)==0:
 		return None
 	#these temp tables could have already been made, and if so, drop them and reinstantiate them 
 	try:
@@ -126,11 +126,13 @@ def PHN_vs_DOB_vs_partial_name_query(db_ptr, found_PHNs, found_datetime_objs, fo
 	db_ptr.inserttable("public.found_partial_names", found_partial_name_table)
 	ret_val =  db_ptr.query("""select * from iclinic_data, found_phns, found_dobs, found_partial_names 
 								where iclinic_data.phn=found_phns.phn and found_dobs.dob = iclinic_data.dob
-								and (found_partial_names.partial_name = iclinic_data.first_name or found_partial_names.partial_name=iclinic_data.last_name);""") 
+								and (lower(found_partial_names.partial_name) = lower(iclinic_data.first_name) or lower(found_partial_names.partial_name)=lower(iclinic_data.last_name));""") 
 	#dropping the tables we made to crossreference DOB vs PHN in the public.patients table
 	db_ptr.query("DROP TABLE found_phns;")
 	db_ptr.query("DROP TABLE found_dobs;")
 	db_ptr.query("DROP TABLE found_partial_names;")
+	if len(ret_val.getresult())== 0 :
+		return None
 	return ret_val
 	
 	
@@ -183,7 +185,8 @@ def PHN_vs_DOB_query(db_ptr, found_PHNs, found_datetime_objs):
 	#dropping the tables we made to crossreference DOB vs PHN in the public.patients table
 	db_ptr.query("DROP TABLE found_phns;")
 	db_ptr.query("DROP TABLE found_dobs;")
-	
+	if len(ret_val.getresult())== 0 :
+		return None
 	return ret_val
 
 """
@@ -218,12 +221,14 @@ def PHN_vs_partial_name_query(db_ptr, found_PHNs, found_full_names):
 	db_ptr.inserttable("public.partial_names", found_partial_name_table)
 	db_ptr.inserttable("public.found_phns", found_PHN_table)
 	ret_val = db_ptr.query("""SELECT * from public.iclinic_data, public.partial_names, public.found_phns
-								where (partial_names.part_name = iclinic_data.first_name or partial_names.part_name=iclinic_data.last_name)
+								where (lower(partial_names.part_name) = lower(iclinic_data.first_name) or lower(partial_names.part_name)=lower(iclinic_data.last_name))
 									and (public.iclinic_data.phn = found_phns.found_phn); """)
 	#print(db_ptr.query("SELECT * from partial_names"))
 	#print(db_ptr.query("SELECT * from found_phns"))
 	db_ptr.query("DROP table partial_names;")
 	db_ptr.query("DROP table found_phns;")
+	if len(ret_val.getresult())== 0 :
+		return None
 	return ret_val
 	
 def DOB_vs_partial_name_query(db_ptr, found_datetime_objs, found_full_names):
@@ -257,11 +262,13 @@ def DOB_vs_partial_name_query(db_ptr, found_datetime_objs, found_full_names):
 	db_ptr.inserttable("public.found_partial_names", found_partial_name_table)
 	ret_val =  db_ptr.query("""select * from iclinic_data, found_dobs, found_partial_names 
 								where found_dobs.dob = iclinic_data.dob
-								and (found_partial_names.partial_name = iclinic_data.first_name or found_partial_names.partial_name=iclinic_data.last_name);""") 
+								and (lower(found_partial_names.partial_name) = lower(iclinic_data.first_name) or lower(found_partial_names.partial_name)=lower(iclinic_data.last_name));""") 
 	#dropping the tables we made to crossreference DOB vs partial name match in the public.patients table
 	
 	db_ptr.query("DROP TABLE found_dobs;")
 	db_ptr.query("DROP TABLE found_partial_names;")
+	if len(ret_val.getresult())== 0 :
+		return None
 	return ret_val	
 def PHN_query(db_ptr, found_PHNs):
 	if len(found_PHNs) == 0:
@@ -282,6 +289,8 @@ def PHN_query(db_ptr, found_PHNs):
 	#print(db_ptr.query("SELECT * from found_phns"))
 	
 	db_ptr.query("DROP table found_phns;")
+	if len(ret_val.getresult())== 0 :
+		return None
 	return ret_val
 
 #the main class is used for testing, outside of super-program's environment
