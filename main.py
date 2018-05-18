@@ -311,18 +311,27 @@ def main():
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
 		degrees_of_rotation = 0
-		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
-											compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-		#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-		if patient_prediction_result[0]=="F":
-			print("Failed to find a patient match, rotating and retrying...")
-			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
-			degrees_of_rotation = 180
-			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-			fp.close()
-		else:
-			fp.close()
+		try:
+			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
+												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
+			if patient_prediction_result[0]=="F":
+				print("Failed to find a patient match, rotating and retrying...")
+				fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
+				degrees_of_rotation = 180
+				patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+				fp.close()
+			else:
+				fp.close()
+#CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
+		except:
+		    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+			message = template.format(type(ex).__name__, ex.args)
+			
+
+			runtime_fp.write("\n{}\n".format(message))
+			fp.write("\n{}\n".format(message))
 		runtime_fp.write("\nTest # {}, time elapsed {}".format(str(index), str(time.time()-start_time)))
-		
+	runtime_fp.close()
 if __name__ == "__main__":
 	main()
