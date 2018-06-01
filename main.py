@@ -52,7 +52,8 @@ from PIL import *
 import numpy as np
 from pdf2image import convert_from_path, convert_from_bytes
 from stanfordcorenlp import StanfordCoreNLP
-import db_interaction
+#import db_interaction
+import psycopg_testing as db_interaction
 import logging
 import json
 import sys
@@ -177,31 +178,31 @@ OUTPUT:
 
 def patient_hypothesis(matches):
 	#if there is at least one match, then find the highest rating match(es) and return them as the most likely patient
-	print(str(matches))
+	#print(str(matches))
 	if matches[0] or matches[1] or matches[2] or matches[3]:
-		if matches[0] and len(matches[0].getresult())!=0:
-			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[0].getresult()]))
+		if matches[0] and len(matches[0])!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[0]]))
 			if len(highest_matches)>1:
 				return ("Multiple A Matches",str(highest_matches))
 			else:
 				return ("A",str(highest_matches[0]))
-		elif matches[1]and len(matches[1].getresult())!=0:
-			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[1].getresult()]))			
+		elif matches[1]and len(matches[1])!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[1]]))			
 			if len(highest_matches)>1:
-				return ("Multiple B Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[1].getresult()]))))
+				return ("Multiple B Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[1]]))))
 			else:
 				return ("B",str(highest_matches[0]))
-		elif matches[2] and len(matches[2].getresult())!=0:
-			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[2].getresult()]))
+		elif matches[2] and len(matches[2])!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[2]]))
 			if len(highest_matches)>1:
-				return ("Multiple C Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[2].getresult()]))))
+				return ("Multiple C Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[2]]))))
 			else:
 				return ("C",str(highest_matches[0]))
-		elif matches[3] and len(matches[3].getresult())!=0:
-			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[3].getresult()]))
+		elif matches[3] and len(matches[3])!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[3]]))
 			if len(highest_matches)>1:
 				print(str(matches[3].getresult()))
-				return ("Multiple D Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[3].getresult()]))))
+				return ("Multiple D Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[3]]))))
 			else:
 				return ("D",str(highest_matches[0]))
 		else:
@@ -262,12 +263,12 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 	fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
 	fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
 
-	db= db_interaction.make_connection_to_db(database_name)
+	db= db_interaction.make_connection_to_db(database_name, "teb8")
 
-	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0])
-	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes)
-	PHN_vs_partial_name_results = db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0])
-	DOB_vs_partial_name_results = db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0])
+	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0], "iclinic_data")
+	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, "iclinic_data")
+	PHN_vs_partial_name_results = db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0], "iclinic_data")
+	DOB_vs_partial_name_results = db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0], "iclinic_data")
 
 	#This patient prediction is the variable which should be used to determine where the sample gets filed
 	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results))
@@ -323,6 +324,7 @@ def main():
 				fp.close()
 			else:
 				fp.close()
+			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
 #CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
 		except:
 			template = "An exception of type {0} occurred. Arguments:\n{1!r}"
