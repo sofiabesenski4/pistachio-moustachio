@@ -87,6 +87,7 @@ IDea: check the database to find a match of
 """
 
 def PHN_vs_DOB_vs_partial_name_query(db_ptr, found_PHNs, found_datetime_objs, found_full_names):
+
 	if len(found_PHNs) == 0 or len(found_datetime_objs) == 0 or len(found_full_names)==0:
 		return None
 	#these temp tables could have already been made, and if so, drop them and reinstantiate them 
@@ -94,22 +95,21 @@ def PHN_vs_DOB_vs_partial_name_query(db_ptr, found_PHNs, found_datetime_objs, fo
 		db_ptr.query("CREATE TABLE found_phns(phn text PRIMARY KEY, index integer UNIQUE);")
 	except:
 	#if they have been made already, delete them, then recreate them so we can make fresh and empty tables
-		db_ptr.query("DROP TABLE found_phns;")
-		db_ptr.query("CREATE TABLE  found_phns(phn text PRIMARY KEY, found_phn_index integer UNIQUE);")
+	
+		print("error occured when trying to create found_phn table in  PHN_vs_DOB_vs_partial_name_query")
 		
 	try:
 		db_ptr.query("CREATE TABLE  found_dobs(dob date, found_date_index integer PRIMARY KEY);")
 	except:
+		print("error occured when trying to create found_dob table in  PHN_vs_DOB_vs_partial_name_query")
 	#if they have been made already, delete them, then recreate them so we can make fresh and empty tables
-		db_ptr.query("DROP TABLE found_dobs;")
-		db_ptr.query("CREATE  TABLE found_dobs(dob date, found_date_index integer PRIMARY KEY);")
+		
 	try:
 		db_ptr.query("CREATE TABLE  found_partial_names(partial_name text, partial_name_index integer PRIMARY KEY);")
 	except:
 	#if they have been made already, delete them, then recreate them so we can make fresh and empty tables
-		db_ptr.query("DROP TABLE found_partial_names;")
-		db_ptr.query("CREATE TABLE found_partial_names(partial_name text, partial_name_index integer PRIMARY KEY);")
-	
+		
+		print("error occured when trying to create found_partial_name table in  PHN_vs_DOB_vs_partial_name_query")
 #	print(db_ptr.get_tables())
 	#each row must be in form of a tuple
 	partial_name_list = []
