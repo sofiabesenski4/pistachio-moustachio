@@ -17,7 +17,7 @@ java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "
 
 PROGRAM FLOW:
 
-updated Mar 3 2018
+updated Jun 1 2018
 input-> directory containing the pdf documents
 
 for all pdfs in directory:
@@ -29,11 +29,13 @@ for all pdfs in directory:
 	
 	-use precompiled regex to convert all the dates into a standardized format
 	-use regex to determine which numbers could represent a PHN
-	-store all the names, dates, and numbers in text files in the Test_Results folder
 	-make a connection with a database on the local machine, containing the table "patients" with columns:
 		PATIENT HEALTH NUMBER, FIRST_NAME, LAST_NAME, DATE OF BIRTH
-	-find all matches of PHNs and DOBs found using NER, corresponding to patient entries in the database
-
+	-while we havent yet found a patient match and we havent checked each orientation
+		-attempt to find all matches of PHNs and DOBs found using NER, corresponding to patient entries in the database
+		-rotate the image to account for documents which were rotated by 90, 180, and 270 degrees
+	-store all the names, dates, and numbers in text files in the Test_Results folder
+	
 
 
 
@@ -273,7 +275,7 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 	#This patient prediction is the variable which should be used to determine where the sample gets filed
 	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results))
 	
-	fp.write("\nPatient Hypothesis: " + str(patient_prediction_result))
+	fp.write("\nPatient Hypothesis: " + str(patient_prediction_result)+"at {} degrees of rotation".format(str(degrees_of_rotation)))
 	fp.write("\nA: Matches crossreferencing the PHN vs DOB vs partial found names\n" + str(PHN_vs_DOB_vs_partial_name_results))
 	fp.write("\nB: Matches crossreferencing the PHN vs DOB:\n" + str(PHN_vs_DOB_results))
 	fp.write("\nC: Matches crossreferencing the PHN vs partial found names:\n" + str(PHN_vs_partial_name_results))
@@ -313,17 +315,20 @@ def main():
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
 		degrees_of_rotation = 0
 		try:
+			
 			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
 												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+			attempt=1
+			degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-			if patient_prediction_result[0]=="F":
+			while patient_prediction_result[0]=="F" and attempt<5:
 				print("Failed to find a patient match, rotating and retrying...")
 				fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
-				degrees_of_rotation = 180
 				patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-				fp.close()
-			else:
-				fp.close()
+				degrees_of_rotation +=90
+				attempt+=1
+			fp.close()
+			
 			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
 #CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
 		except:
