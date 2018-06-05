@@ -1,8 +1,8 @@
-"""
+"""	
 Created: Feb 9th 2018
 Thomas Besenski
 
-input parameters:$python3 main.py --d <DIRECTORY NAME CONTAINING PDFs>
+input parameters:$python3 main.py --f <DIRECTORY NAME CONTAINING PDFs> --db <name of the postgresql database to reference>
 
 This is the script which will iterate through each test file, processing it through tesseract ocr,
 and then feeding the text into a java CoreNLPNER program to annotate the names of people in the medical letter,
@@ -152,19 +152,6 @@ Input: -list of identified numbers from the document
 """
 
 def PHN_identifier(num_list, regex_pattern):
-	"""
-
-DDMMYYYY_date_pattern = r'((?:\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December)[\s\W]*(?:\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December)[\s\W]*\d{4})'
-YYYYMMDD_date_pattern = r'(\d{4}[\s\W]*(?:\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December)[\s\W]*(?:\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December))'
-
-	This pattern was tested on:
-1234567891 =match
-	1234-567891 =match
-12345 67890 =match
-123 23467 23 =match
-1234567891 0 = 1234567891 match
-1 1234567890 = 1234567890 match
-	"""
 	temp_list =[re.search(regex_pattern, element).group(0).replace(u"\xa0","") for element in num_list if re.search(regex_pattern, element)]
 	temp_set = set(temp_list)
 	temp_list = list(temp_set)
@@ -326,18 +313,27 @@ def main():
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
 		degrees_of_rotation = 0
-		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
-											compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-		#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-		if patient_prediction_result[0]=="F":
-			print("Failed to find a patient match, rotating and retrying...")
-			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
-			degrees_of_rotation = 180
-			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-			fp.close()
-		else:
-			fp.close()
+		try:
+			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
+												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
+			if patient_prediction_result[0]=="F":
+				print("Failed to find a patient match, rotating and retrying...")
+				fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
+				degrees_of_rotation = 180
+				patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+				fp.close()
+			else:
+				fp.close()
+#CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
+		except:
+			template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+			message = template.format(type(ex).__name__, ex.args)
+			
+
+			runtime_fp.write("\n{}\n".format(message))
+			fp.write("\n{}\n".format(message))
 		runtime_fp.write("\nTest # {}, time elapsed {}".format(str(index), str(time.time()-start_time)))
-		
+	runtime_fp.close()
 if __name__ == "__main__":
 	main()
