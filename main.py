@@ -320,6 +320,8 @@ def main():
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
 	
 	for index,pdf_path in enumerate(pdf_list):
+		if index<82:
+			continue
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
