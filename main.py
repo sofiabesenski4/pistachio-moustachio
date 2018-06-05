@@ -265,7 +265,7 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 	fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
 	fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
 
-	db= db_interaction.make_connection_to_db(database_name, "teb8")
+	db= db_interaction.make_connection_to_db(database_name, "thomas")
 
 	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0], "iclinic_data")
 	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, "iclinic_data")
@@ -296,6 +296,7 @@ def main():
 	#from stack overflow : https://stackoverflow.com/questions/3964681/find-all-files-in-a-directory-with-extension-txt-in-python
 	#getting the names of all the files stored within that folder
 	pdf_list = get_pdf_paths(str(args.f))
+
 	database_name = args.db
 	PHN_pattern = r'(\d{10})|((?:\d[^\n\d]?){10}(?!\d))'
 
@@ -308,10 +309,8 @@ def main():
 	compiled_PHN_pat = re.compile(PHN_pattern)
 	corenlp_ptr = interact.init_corenlp()
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
-	
+
 	for index,pdf_path in enumerate(pdf_list):
-		if index<82:
-			continue
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
@@ -323,11 +322,14 @@ def main():
 			attempt=1
 			degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-			while patient_prediction_result[0]=="F" and attempt<5:
-				print("Failed to find a patient match, rotating and retrying...")
+			while patient_prediction_result[0]=="F" and attempt<4:
+				print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
 				fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
 				patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
 				degrees_of_rotation +=90
+				
+				if attempt== 2:
+					degrees_of_rotation -=270
 				attempt+=1
 			fp.close()
 			
