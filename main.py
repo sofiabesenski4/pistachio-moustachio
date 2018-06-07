@@ -73,11 +73,14 @@ import time
 	
 #initializing a dictionary to simplify recognizing the different date formats:
 #DATE_MODES = {"DDMMYYYY":1,"MMDDYYYY":2,"YYYYMMDD":3}
-def get_pdf_paths(directory_name):
-	pdf_paths = []
-	for pdf in os.listdir(directory_name):
-		if pdf.endswith(".pdf"):
-			pdf_paths.append(os.path.join(directory_name, pdf))	
+def get_pdf_paths(directory_name, pdf_paths = []):
+	
+	for file_name in os.listdir(directory_name):
+		if file_name.endswith(".pdf"):
+			pdf_paths.append(os.path.join(directory_name, file_name))	
+		elif os.path.isdir(os.path.join(directory_name, file_name)):
+			print("directory: " + file_name)
+			pdf_paths =get_pdf_paths(os.path.join(directory_name,file_name),pdf_paths)
 	return pdf_paths
 """
 strip_dates: to be used when given a list of potential dates
@@ -175,7 +178,7 @@ INPUT:
 OUTPUT:
 	a tuple: (Status, Match/None)
 	status = "Multiple Matches of X" or ""
-	 
+		
 	"""
 
 def patient_hypothesis(matches):
@@ -289,14 +292,15 @@ def main():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("--f","--folder", required = True)
 	ap.add_argument("--db","--database",required =True)
+	ap.add_argument("--depth", required=False)
 	args = ap.parse_args()
 	start_time = time.time()
 	
 	
 	#from stack overflow : https://stackoverflow.com/questions/3964681/find-all-files-in-a-directory-with-extension-txt-in-python
 	#getting the names of all the files stored within that folder
+	
 	pdf_list = get_pdf_paths(str(args.f))
-
 	database_name = args.db
 	PHN_pattern = r'(\d{10})|((?:\d[^\n\d]?){10}(?!\d))'
 
@@ -309,7 +313,7 @@ def main():
 	compiled_PHN_pat = re.compile(PHN_pattern)
 	corenlp_ptr = interact.init_corenlp()
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
-
+	print(str(len(pdf_list)))
 	for index,pdf_path in enumerate(pdf_list):
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
@@ -342,6 +346,7 @@ def main():
 
 			runtime_fp.write("\n{}\n".format(message))
 			fp.write("\n{}\n".format(message))
+			continue
 		runtime_fp.write("\nTest # {}, time elapsed {}".format(str(index), str(time.time()-start_time)))
 	runtime_fp.close()
 if __name__ == "__main__":
