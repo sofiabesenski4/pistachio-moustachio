@@ -315,6 +315,8 @@ def main():
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
 	print(str(len(pdf_list)))
 	for index,pdf_path in enumerate(pdf_list):
+		if index<33:
+			continue
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
@@ -340,12 +342,12 @@ def main():
 			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
 #CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
 		except:
-			template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-			message = template.format(type(ex).__name__, ex.args)
+			#template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+			#message = template.format(type(ex).__name__, ex.args)
 			
 
-			runtime_fp.write("\n{}\n".format(message))
-			fp.write("\n{}\n".format(message))
+			#runtime_fp.write("\n{}\n".format(message))
+			fp.write("ERROR OCCURED")
 			continue
 		runtime_fp.write("\nTest # {}, time elapsed {}".format(str(index), str(time.time()-start_time)))
 	runtime_fp.close()
