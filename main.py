@@ -239,7 +239,8 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 		
 	#per_day_num = tuple:(PERSON[], DATE[], NUMBER[])
 	per_day_num = interact.annotate_ner_with_corenlp(text.replace(",",""), corenlp_ptr)
-		
+	filep = open("converted_text_{}.txt".format(str(index)),"w")
+	filep.write(text)
 	valid_dates = []
 	#each of these strip_dates function calls appends each valid date match to the valid_dates list
 	strip_dates(per_day_num[1],compiled_DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
@@ -268,7 +269,7 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 	fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
 	fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
 
-	db= db_interaction.make_connection_to_db(database_name, "thomas")
+	db= db_interaction.make_connection_to_db(database_name, "teb8")
 
 	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0], "iclinic_data")
 	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, "iclinic_data")
@@ -315,18 +316,16 @@ def main():
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
 	print(str(len(pdf_list)))
 	for index,pdf_path in enumerate(pdf_list):
-
-
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
 		degrees_of_rotation = 0
-		try:
+	#	try:
 			
-			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
+		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
 												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-			attempt=1
-			degrees_of_rotation+=180
+		attempt=1
+		degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
 			while patient_prediction_result[0]=="F" and attempt<2:
 				print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
@@ -341,7 +340,7 @@ def main():
 			gc.collect()
 			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
 #CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
-		except:
+"""		except:
 			#template = "An exception of type {0} occurred. Arguments:\n{1!r}"
 			#message = template.format(type(ex).__name__, ex.args)
 			
@@ -351,5 +350,7 @@ def main():
 			continue
 		runtime_fp.write("\nTest # {}, time elapsed {}".format(str(index), str(time.time()-start_time)))
 	runtime_fp.close()
+
+"""
 if __name__ == "__main__":
 	main()

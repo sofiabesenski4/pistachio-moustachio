@@ -32,7 +32,7 @@ input: pdf_path = the path, relative to the pwd, to the pdf we want to perform O
 output: 
 """
 def convert_pdf_to_txt(pdf_path, degrees_of_rotation):
-	images = convert_from_path(pdf_path, dpi = 300, last_page = 5)
+	images = convert_from_path(pdf_path, dpi = 300)
 	#(amazingly) simply implementation(??)
 	
 	image_list =[]
