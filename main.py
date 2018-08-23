@@ -69,7 +69,7 @@ import datetime
 import Interact_with_Server as interact
 import PDF_To_TXT as p2t
 import time
-
+import gc
 	
 #initializing a dictionary to simplify recognizing the different date formats:
 #DATE_MODES = {"DDMMYYYY":1,"MMDDYYYY":2,"YYYYMMDD":3}
@@ -315,8 +315,8 @@ def main():
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
 	print(str(len(pdf_list)))
 	for index,pdf_path in enumerate(pdf_list):
-		if index<33:
-			continue
+
+
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
@@ -328,7 +328,7 @@ def main():
 			attempt=1
 			degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-			while patient_prediction_result[0]=="F" and attempt<4:
+			while patient_prediction_result[0]=="F" and attempt<2:
 				print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
 				fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
 				patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
@@ -338,7 +338,7 @@ def main():
 					degrees_of_rotation -=270
 				attempt+=1
 			fp.close()
-			
+			gc.collect()
 			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
 #CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
 		except:
