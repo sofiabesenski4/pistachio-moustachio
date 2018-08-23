@@ -55,7 +55,7 @@ import numpy as np
 from pdf2image import convert_from_path, convert_from_bytes
 from stanfordcorenlp import StanfordCoreNLP
 #import db_interaction
-import psycopg_testing as db_interaction
+import db_interaction
 import logging
 import json
 import sys
@@ -124,7 +124,6 @@ def find_dates(text, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 	#ie: "2 1995 May-10" could be annotated as a date if the OCR recognized "Page 2 1995 May-10" in the pdf
 	#it accounts for dates which would be of the form DD MM YYYY or MM DD YYYY where the month can be 2 dig number or it can be the full month name
 	# pattern YYYYMMDD_date_strip accounts for dates where the year appears first
-	
 	
 	month_dict = {"January":1,"February":2,"March":3,"April":4,"May":5,"June":6,"July":7,"August":8,"September":9,"October":10,"November":11,"December":12,
 				"Jan":1,"Feb":2,"Mar":3,"Apr":4,"May":5,"Jun":6,"Jul":7,"Aug":8,"Sep":9,"Oct":10,"Nov":11,"Dec":12,"1":1,
@@ -232,7 +231,7 @@ Output: a patient_hypothesis tuple of the form (<match status>/None, <patient(s)
 
 
 """
-def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat):
+def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat):
 	
 	
 	text = p2t.convert_pdf_to_txt(pdf_path, degrees_of_rotation)
@@ -272,9 +271,9 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 	db= db_interaction.make_connection_to_db(database_name, "teb8")
 
 	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0], "iclinic_data")
-	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, "iclinic_data")
-	PHN_vs_partial_name_results = db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0], "iclinic_data")
-	DOB_vs_partial_name_results = db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0], "iclinic_data")
+	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, table_name)
+	PHN_vs_partial_name_results = db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0], table_name)
+	DOB_vs_partial_name_results = db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0], table_name)
 
 	#This patient prediction is the variable which should be used to determine where the sample gets filed
 	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results))
@@ -285,15 +284,18 @@ def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotati
 	fp.write("\nC: Matches crossreferencing the PHN vs partial found names:\n" + str(PHN_vs_partial_name_results))
 	fp.write("\nD: Matches crossreferencing the DOB vs partial found names:\n" + str(DOB_vs_partial_name_results))
 	
+	fp.close()
 	return patient_prediction_result
 
 
 
 def main():
 	ap = argparse.ArgumentParser()
-	ap.add_argument("--f","--folder", required = True)
+	ap.add_argument("--if","--inputfolder", required = True)
 	ap.add_argument("--db","--database",required =True)
-	ap.add_argument("--depth", required=False)
+	ap.add_argument("--t","--tablename", required = False)
+	ap.add_argument("--of", "--outputfolder", required=False)
+	
 	args = ap.parse_args()
 	start_time = time.time()
 	
@@ -303,8 +305,9 @@ def main():
 	
 	pdf_list = get_pdf_paths(str(args.f))
 	database_name = args.db
+	
+	#Setting up the regex patterns needed for number and date extractionn
 	PHN_pattern = r'(\d{10})|((?:\d[^\n\d]?){10}(?!\d))'
-
 	DDMMYYYY_date_pattern = r'((?<!\d\d)(\d{1,2})[^\na-zA-Z0-9]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{4}))'
 	YYYYMMDD_date_pattern = r'((\d{4})[^\n\w]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\n\w]+(\d{1,2}))'
 	MMDDYYYY_date_pattern = r'((\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{1,2})[^\na-zA-Z0-9]+(\d{4}))'
@@ -312,9 +315,13 @@ def main():
 	compiled_YYYYMMDD_date_pattern = re.compile(YYYYMMDD_date_pattern,  re.IGNORECASE)
 	compiled_MMDDYYYY_date_pattern = re.compile(MMDDYYYY_date_pattern, re.IGNORECASE)
 	compiled_PHN_pat = re.compile(PHN_pattern)
+	
+	
 	corenlp_ptr = interact.init_corenlp()
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
-	print(str(len(pdf_list)))
+	
+	if args.t == None:
+		args.t = "iclinic_data"
 	for index,pdf_path in enumerate(pdf_list):
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
@@ -322,7 +329,7 @@ def main():
 		degrees_of_rotation = 0
 	#	try:
 			
-		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
+		patient_prediction_result = process_sample(index, pdf_path, database_name, args.t, corenlp_ptr,  degrees_of_rotation, fp,
 												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
 		attempt=1
 		degrees_of_rotation+=180
@@ -339,18 +346,7 @@ def main():
 			fp.close()
 			gc.collect()
 			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
-#CATCH ALL EXCEPTIONS, NEED TO SEE WHAT TYPE OF EXCEPTIONS COME UP
-"""		except:
-			#template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-			#message = template.format(type(ex).__name__, ex.args)
-			
 
-			#runtime_fp.write("\n{}\n".format(message))
-			fp.write("ERROR OCCURED")
-			continue
-		runtime_fp.write("\nTest # {}, time elapsed {}".format(str(index), str(time.time()-start_time)))
-	runtime_fp.close()
 
-"""
 if __name__ == "__main__":
 	main()
