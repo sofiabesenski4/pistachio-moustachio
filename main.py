@@ -70,7 +70,7 @@ import Interact_with_Server as interact
 import PDF_To_TXT as p2t
 import time
 import gc
-	
+from date_extractor import extract_dates
 #initializing a dictionary to simplify recognizing the different date formats:
 #DATE_MODES = {"DDMMYYYY":1,"MMDDYYYY":2,"YYYYMMDD":3}
 def get_pdf_paths(directory_name, pdf_paths = []):
@@ -231,7 +231,7 @@ Output: a patient_hypothesis tuple of the form (<match status>/None, <patient(s)
 
 
 """
-def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat):
+def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat, table_name = "iclinic_data"):
 	
 	
 	text = p2t.convert_pdf_to_txt(pdf_path, degrees_of_rotation)
@@ -249,8 +249,8 @@ def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", c
 	find_dates(text,compiled_YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
 	find_dates(text,compiled_MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
 	found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
-		
-		
+	extracted_dates = extract_dates(text)
+	found_datetimes+=extracted_dates
 	"""
 	#print("PERSON list :",str(per_day_num[0]))
 	#print("CoreNLP's DATE list: ", str(per_day_num[1]))
@@ -264,10 +264,16 @@ def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", c
 	fp.write("{}\nTest case #{} processed: ".format(str(pdf_path),index))
 	fp.write("Person List: "+ str(per_day_num[0])+"\n\n")
 	fp.write("CoreNLP's Date List: "+ str(per_day_num[1])+"\n\n")
+	fp.write("Extracted dates with date-extractor: " + str(extracted_dates))
 	fp.write("Number list: "+ str(per_day_num[2])+"\n\n")
 	fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
 	fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
-
+	
+	#####################################################################################################
+	#combining the dates in this step
+	
+	
+	
 	db= db_interaction.make_connection_to_db(database_name, "teb8")
 
 	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0], "iclinic_data")
@@ -329,8 +335,8 @@ def main():
 		degrees_of_rotation = 0
 	#	try:
 			
-		patient_prediction_result = process_sample(index, pdf_path, database_name, args.t, corenlp_ptr,  degrees_of_rotation, fp,
-												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
+												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat, args.t)
 		attempt=1
 		degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
