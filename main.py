@@ -2,11 +2,12 @@
 Created: Feb 9th 2018
 Thomas Besenski
 
-input parameters:$python3 main.py --f <DIRECTORY NAME CONTAINING PDFs> --db <name of the postgresql database to reference>
-
+to run : $python3 main.py --if <DIRECTORY NAME CONTAINING PDFs> --of <Directory name to output the results to> 
+							--db <name of the postgresql database to reference> --t <table name where the patients are contained>
+							
 This is the script which will iterate through each test file, processing it through tesseract ocr,
 and then feeding the text into a java CoreNLPNER program to annotate the names of people in the medical letter,
-and then calling the script to actually print the names to stdout 
+and then reference the database where the patient files are stored in hopes of finding a patient match via PHN. DOB and/or partial name
 
 there must be a stanford corenlp server running on the port 9000, and this will communicate
 with that server, returning the output of the annotations.
@@ -62,7 +63,6 @@ import sys
 import re
 import os
 import argparse
-import re
 from enum import Enum
 import datetime
 #user defined modules
@@ -334,18 +334,18 @@ def main():
 		attempt=1
 		degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-			while patient_prediction_result[0]=="F" and attempt<2:
-				print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
-				fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
-				patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-				degrees_of_rotation +=90
-				
-				if attempt== 2:
-					degrees_of_rotation -=270
-				attempt+=1
-			fp.close()
-			gc.collect()
-			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
+		while patient_prediction_result[0]=="F" and attempt<2:
+			print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
+			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
+			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+			degrees_of_rotation +=90
+			
+			if attempt== 2:
+				degrees_of_rotation -=270
+			attempt+=1
+		fp.close()
+		gc.collect()
+		print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
 
 
 if __name__ == "__main__":
