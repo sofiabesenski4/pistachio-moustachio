@@ -99,9 +99,9 @@ def PHN_vs_DOB_vs_partial_name_query(connection_ptr, found_PHNs, found_datetime_
 			
 			[db_ptr.execute("Insert into found_partial_names values (%s,%s)", element) for element in found_partial_name_list]
 			
-			db_ptr.execute("""select * from iclinic_data, found_phns, found_dobs, found_partial_names 
-								where iclinic_data.phn=found_phns.phn and found_dobs.dob = iclinic_data.dob
-								and (lower(found_partial_names.partial_name) = lower(iclinic_data.first_name) or lower(found_partial_names.partial_name)=lower(iclinic_data.last_name));""") 
+			db_ptr.execute("""select * from fax_test_1, found_phns, found_dobs, found_partial_names 
+								where fax_test_1.fax_line = '15737' and fax_test_1.phn=found_phns.phn and found_dobs.dob = fax_test_1.dob
+								and (lower(found_partial_names.partial_name) = lower(fax_test_1.first_name) or lower(found_partial_names.partial_name)=lower(fax_test_1.last_name));""") 
 			ret_list = db_ptr.fetchall()
 			db_ptr.execute("DROP table found_phns;")
 			db_ptr.execute("DROP table found_dobs;")
@@ -145,8 +145,8 @@ def PHN_vs_DOB_query(connection_ptr, found_PHNs, found_datetime_objs, table_name
 			[db_ptr.execute("Insert into found_dobs values (%s,%s)", element) for element in found_DOB_list]
 			
 			
-			db_ptr.execute("""select * from iclinic_data, found_phns, found_dobs 
-								where iclinic_data.phn=found_phns.phn and found_dobs.dob = iclinic_data.dob;""") 
+			db_ptr.execute("""select * from fax_test_1, found_phns, found_dobs 
+								where fax_test_1.fax_line = '15737' and fax_test_1.phn=found_phns.phn and found_dobs.dob = fax_test_1.dob;""") 
 			ret_list = db_ptr.fetchall()
 			db_ptr.execute("DROP table found_phns;")
 			db_ptr.execute("DROP table found_dobs;")
@@ -192,9 +192,9 @@ def PHN_vs_partial_name_query(connection_ptr, found_PHNs, found_full_names, tabl
 			
 			[db_ptr.execute("Insert into found_partial_names values (%s,%s)", element) for element in found_partial_name_list]
 			
-			db_ptr.execute("""select * from iclinic_data, found_phns, found_partial_names 
-								where iclinic_data.phn=found_phns.phn and
-								 (lower(found_partial_names.partial_name) = lower(iclinic_data.first_name) or lower(found_partial_names.partial_name)=lower(iclinic_data.last_name));""") 
+			db_ptr.execute("""select * from fax_test_1, found_phns, found_partial_names 
+								where fax_test_1.fax_line = '15737' and fax_test_1.phn=found_phns.phn and
+								 (lower(found_partial_names.partial_name) = lower(fax_test_1.first_name) or lower(found_partial_names.partial_name)=lower(fax_test_1.last_name));""") 
 			ret_list = db_ptr.fetchall()
 			db_ptr.execute("DROP table found_phns;")
 			
@@ -241,9 +241,9 @@ def DOB_vs_partial_name_query(connection_ptr, found_datetime_objs, found_full_na
 			
 			[db_ptr.execute("Insert into found_partial_names values (%s,%s)", element) for element in found_partial_name_list]
 			
-			db_ptr.execute("""select * from iclinic_data, found_dobs, found_partial_names 
-								where   found_dobs.dob = iclinic_data.dob
-								and (lower(found_partial_names.partial_name) = lower(iclinic_data.first_name) or lower(found_partial_names.partial_name)=lower(iclinic_data.last_name));""") 
+			db_ptr.execute("""select * from fax_test_1, found_dobs, found_partial_names 
+								where   fax_test_1.fax_line = '15737' and found_dobs.dob = fax_test_1.dob
+								and (lower(found_partial_names.partial_name) = lower(fax_test_1.first_name) or lower(found_partial_names.partial_name)=lower(fax_test_1.last_name));""") 
 			ret_list = db_ptr.fetchall()
 			db_ptr.execute("DROP table found_dobs;")
 			db_ptr.execute("DROP table found_partial_names;")
@@ -253,16 +253,16 @@ def DOB_vs_partial_name_query(connection_ptr, found_datetime_objs, found_full_na
 				return ret_list
 
 def main():
-	connection_ptr = make_connection_to_db("test_patients", "teb8")
+	connection_ptr = make_connection_to_db("test_patients", "thomas")
 	#insert_patient_into_db(connection_ptr, ("1234569894","Psycooo","PGGG",datetime.date(year = 2018, month = 5, day = 18)), "iclinic_data")
-	select_all(connection_ptr, "iclinic_data")
+	select_all(connection_ptr, "fax_test_1")
 	test_found_phns = ["1234567894","1234567890","1234567896"]
 	test_found_DOBs = [datetime.date(year = 1994, day = 4, month = 10)]
 	test_found_part_names = ["Bez Thomas", "Melvin"]
-	print("PHN_vs_DOB_vs_partial_name_query", PHN_vs_DOB_vs_partial_name_query(connection_ptr, test_found_phns,test_found_DOBs, test_found_part_names, "iclinic_data"))
-	print("PHN_vs_DOB_query", PHN_vs_DOB_query(connection_ptr, test_found_phns,test_found_DOBs,"iclinic_data"))
-	print("PHN_vs_partial_name_query", PHN_vs_partial_name_query(connection_ptr, test_found_phns,test_found_part_names,"iclinic_data"))
-	print("DOB_vs_partial_name_query", DOB_vs_partial_name_query(connection_ptr, test_found_DOBs,test_found_part_names,"iclinic_data"))
+	print("PHN_vs_DOB_vs_partial_name_query", PHN_vs_DOB_vs_partial_name_query(connection_ptr, test_found_phns,test_found_DOBs, test_found_part_names, "fax_test_1"))
+	print("PHN_vs_DOB_query", PHN_vs_DOB_query(connection_ptr, test_found_phns,test_found_DOBs,"fax_test_1"))
+	print("PHN_vs_partial_name_query", PHN_vs_partial_name_query(connection_ptr, test_found_phns,test_found_part_names,"fax_test_1"))
+	print("DOB_vs_partial_name_query", DOB_vs_partial_name_query(connection_ptr, test_found_DOBs,test_found_part_names,"fax_test_1"))
 
 
 

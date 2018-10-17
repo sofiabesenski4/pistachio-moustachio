@@ -231,15 +231,15 @@ Output: a patient_hypothesis tuple of the form (<match status>/None, <patient(s)
 
 
 """
-def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat):
+def process_sample(index,pdf_path, database_name, table_name, corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat):
 	
 	
 	text = p2t.convert_pdf_to_txt(pdf_path, degrees_of_rotation)
 		
 	#per_day_num = tuple:(PERSON[], DATE[], NUMBER[])
 	per_day_num = interact.annotate_ner_with_corenlp(text.replace(",",""), corenlp_ptr)
-	filep = open("converted_text_{}.txt".format(str(index)),"w")
-	filep.write(text)
+	#filep = open("converted_text_{}.txt".format(str(index)),"w")
+	#filep.write(text)
 	valid_dates = []
 	#each of these strip_dates function calls appends each valid date match to the valid_dates list
 	strip_dates(per_day_num[1],compiled_DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
@@ -248,7 +248,15 @@ def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", c
 	find_dates(text,compiled_DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
 	find_dates(text,compiled_YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
 	find_dates(text,compiled_MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
-	found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
+	found_datetimes=[]	
+	for date in valid_dates:
+		try:
+			if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018:
+				
+				found_datetimes.append(datetime.date(int(date[0]),int(date[1]),int(date[2])))
+		except Exception:
+			continue
+	#found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
 		
 		
 	"""
@@ -268,7 +276,7 @@ def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", c
 	fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
 	fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
 
-	db= db_interaction.make_connection_to_db(database_name, "teb8")
+	db= db_interaction.make_connection_to_db(database_name, "thomas")
 
 	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0], "iclinic_data")
 	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, table_name)
@@ -291,7 +299,7 @@ def process_sample(index,pdf_path, database_name, table_name = "iclinic_data", c
 
 def main():
 	ap = argparse.ArgumentParser()
-	ap.add_argument("--if","--inputfolder", required = True)
+	ap.add_argument("--inf","--inputfolder", required = True)
 	ap.add_argument("--db","--database",required =True)
 	ap.add_argument("--t","--tablename", required = False)
 	ap.add_argument("--of", "--outputfolder", required=False)
@@ -303,14 +311,14 @@ def main():
 	#from stack overflow : https://stackoverflow.com/questions/3964681/find-all-files-in-a-directory-with-extension-txt-in-python
 	#getting the names of all the files stored within that folder
 	
-	pdf_list = get_pdf_paths(str(args.f))
+	pdf_list = get_pdf_paths(str(args.inf))
 	database_name = args.db
 	
 	#Setting up the regex patterns needed for number and date extractionn
 	PHN_pattern = r'(\d{10})|((?:\d[^\n\d]?){10}(?!\d))'
-	DDMMYYYY_date_pattern = r'((?<!\d\d)(\d{1,2})[^\na-zA-Z0-9]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{4}))'
-	YYYYMMDD_date_pattern = r'((\d{4})[^\n\w]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\n\w]+(\d{1,2}))'
-	MMDDYYYY_date_pattern = r'((\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{1,2})[^\na-zA-Z0-9]+(\d{4}))'
+	DDMMYYYY_date_pattern = r'((?<!\d\d)(\d{1,2})[^\na-zA-Z0-9]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{2,4}))'
+	YYYYMMDD_date_pattern = r'((\d{2,4})[^\n\w]+(\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\n\w]+(\d{1,2}))'
+	MMDDYYYY_date_pattern = r'((\d{1,2}|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[^\na-zA-Z0-9]+(\d{1,2})[^\na-zA-Z0-9]+(\d{2,4}))'
 	compiled_DDMMYYYY_date_pattern = re.compile(DDMMYYYY_date_pattern, re.IGNORECASE)	
 	compiled_YYYYMMDD_date_pattern = re.compile(YYYYMMDD_date_pattern,  re.IGNORECASE)
 	compiled_MMDDYYYY_date_pattern = re.compile(MMDDYYYY_date_pattern, re.IGNORECASE)
@@ -320,8 +328,6 @@ def main():
 	corenlp_ptr = interact.init_corenlp()
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
 	
-	if args.t == None:
-		args.t = "iclinic_data"
 	for index,pdf_path in enumerate(pdf_list):
 		print("processing sample #:",str(index))
 		fp = open("Test_Results/{}.txt".format(index), "w")
@@ -334,18 +340,21 @@ def main():
 		attempt=1
 		degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
-			while patient_prediction_result[0]=="F" and attempt<2:
-				print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
-				fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
-				patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
-				degrees_of_rotation +=90
-				
-				if attempt== 2:
-					degrees_of_rotation -=270
-				attempt+=1
-			fp.close()
-			gc.collect()
-			print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
+		"""
+		while patient_prediction_result[0]=="F" and attempt<2:
+			print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
+			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
+			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp,
+			 compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+			degrees_of_rotation +=90
+			
+			if attempt== 2:
+				degrees_of_rotation -=270
+			attempt+=1
+		"""
+		fp.close()
+		gc.collect()
+		print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
 
 
 if __name__ == "__main__":
