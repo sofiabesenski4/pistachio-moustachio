@@ -22,12 +22,13 @@ ap.add_argument("--folder","--f",required=True)
 args = ap.parse_args()
 
 def get_txt_paths(directory_name, pdf_paths = []):
-	
+	#print(str(os.listdir(directory_name)))
+
 	for file_name in os.listdir(directory_name):
 		if file_name.endswith(".txt"):
 			pdf_paths.append(os.path.join(directory_name, file_name))	
 		elif os.path.isdir(os.path.join(directory_name, file_name)):
-#			print("directory: " + file_name)
+			#print("directory: " + file_name)
 			pdf_paths =get_pdf_paths(os.path.join(directory_name,file_name),pdf_paths)
 	return pdf_paths
 
@@ -35,14 +36,17 @@ def get_txt_paths(directory_name, pdf_paths = []):
 txt_paths = get_txt_paths(str(args.folder))
 capture = re.compile(r"'(.*?)'")
 results=[]
+#print(str(txt_paths))
 for txt_doc in txt_paths:
 	fp = open(txt_doc, "r")
 	doc_results=[str(txt_doc)]
+	
 	for line in fp:
 		
 		if line.startswith("Patient Hypothesis:"):
 			 doc_results.append(str(capture.search(line).group(1)))
-	print( str(doc_results))
+			 #print("here:" +str(capture.search(line).group(1)))
+	#print( str(doc_results))
 	results.append(doc_results)
 results_dict={"A":0, "B":0, "C":0,"D":0,"F":0,"Multiple A Matches":0,"Multiple B Matches":0,"Multiple C Matches":0,"Multiple D Matches":0}
 errors=0

@@ -90,6 +90,7 @@ def PHN_vs_DOB_vs_partial_name_query(connection_ptr, found_PHNs, found_datetime_
 			[[partial_name_list.append(part_name) for part_name in full_name.strip().split(" ")] for full_name in found_full_names]
 			
 			found_PHN_list = [tuple([x,phn_index]) for phn_index,x in enumerate(found_PHNs)]
+			#print(found_datetime_objs)
 			found_DOB_list = [tuple([found_datetime.isoformat(),found_date_index]) for found_date_index,found_datetime in enumerate(found_datetime_objs)]
 			found_partial_name_list = [tuple([found_partial_name, index ]) for index,found_partial_name in enumerate(partial_name_list)]
 			
@@ -251,6 +252,43 @@ def DOB_vs_partial_name_query(connection_ptr, found_datetime_objs, found_full_na
 				return None
 			else:
 				return ret_list
+def DOB_query(connection_ptr, found_datetime_objs, table_name):
+	if len(found_datetime_objs) == 0:
+		return None
+	with connection_ptr:
+		with connection_ptr.cursor() as db_ptr:
+			
+			db_ptr.execute("""SELECT table_name FROM information_schema.tables
+									WHERE table_schema = 'public'""")
+			
+			for table in db_ptr.fetchall():
+				if "found_dobs" in table:
+					db_ptr.execute("drop table found_dobs;")
+			try:
+				db_ptr.execute("CREATE TABLE  found_dobs(dob date, found_date_index integer PRIMARY KEY);")
+			except :
+			#if they have been made already, delete them, then recreate them so we can make fresh and empty tables
+
+				print("error occured when trying to create found_dob table in  PHN_vs_DOB_vs_partial_name_query")
+				return
+			
+			found_DOB_list = [tuple([found_datetime.isoformat(),found_date_index]) for found_date_index,found_datetime in enumerate(found_datetime_objs)]
+			
+			
+			[db_ptr.execute("Insert into found_dobs values (%s,%s)", element) for element in found_DOB_list]
+			
+			
+			db_ptr.execute("""select * from fax_test_1, found_dobs 
+								where   fax_test_1.fax_line = '15737' and found_dobs.dob = fax_test_1.dob
+								;""") 
+			ret_list = db_ptr.fetchall()
+			print("RET_LIST: " +str(ret_list))
+			db_ptr.execute("DROP table found_dobs;")
+			if len(ret_list) ==0:
+				return None
+			else:
+				return ret_list
+
 
 def main():
 	connection_ptr = make_connection_to_db("test_patients", "thomas")

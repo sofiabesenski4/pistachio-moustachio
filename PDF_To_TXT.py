@@ -56,8 +56,8 @@ def ocr_images(image_list, degrees_rotation):
 		#cv2.imshow("img,",image)
 		#gray  = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
 		gray = Image.open(os.path.join(os.getcwd(), image_name))
-		if degrees_rotation!= 0:
-			gray = gray.rotate(degrees_rotation)
+		#if degrees_rotation!= 0:
+		#	gray = gray.rotate(degrees_rotation)
 		gray = gray.point(lambda x: 0 if x<200 else 255)
 		"""HERE IS WHERE WE CAN ADD IN OUR OWN FILTERS/PREPROCESSING EFFECTS TO INCREASE OCR ACCURACY DEPENDING ON DATA
 		"""
