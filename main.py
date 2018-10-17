@@ -2,11 +2,12 @@
 Created: Feb 9th 2018
 Thomas Besenski
 
-input parameters:$python3 main.py --f <DIRECTORY NAME CONTAINING PDFs> --db <name of the postgresql database to reference>
-
+to run : $python3 main.py --if <DIRECTORY NAME CONTAINING PDFs> --of <Directory name to output the results to> 
+							--db <name of the postgresql database to reference> --t <table name where the patients are contained>
+							
 This is the script which will iterate through each test file, processing it through tesseract ocr,
 and then feeding the text into a java CoreNLPNER program to annotate the names of people in the medical letter,
-and then calling the script to actually print the names to stdout 
+and then reference the database where the patient files are stored in hopes of finding a patient match via PHN. DOB and/or partial name
 
 there must be a stanford corenlp server running on the port 9000, and this will communicate
 with that server, returning the output of the annotations.
@@ -62,7 +63,6 @@ import sys
 import re
 import os
 import argparse
-import re
 from enum import Enum
 import datetime
 #user defined modules
@@ -70,7 +70,7 @@ import Interact_with_Server as interact
 import PDF_To_TXT as p2t
 import time
 import gc
-	
+from date_extractor import extract_dates
 #initializing a dictionary to simplify recognizing the different date formats:
 #DATE_MODES = {"DDMMYYYY":1,"MMDDYYYY":2,"YYYYMMDD":3}
 def get_pdf_paths(directory_name, pdf_paths = []):
@@ -231,7 +231,11 @@ Output: a patient_hypothesis tuple of the form (<match status>/None, <patient(s)
 
 
 """
+<<<<<<< HEAD
 def process_sample(index,pdf_path, database_name, table_name, corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat):
+=======
+def process_sample(index,pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp,compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat, table_name = "iclinic_data"):
+>>>>>>> 5c9a82ab0759fa047aba5a4c5274fe6ec055fe43
 	
 	
 	text = p2t.convert_pdf_to_txt(pdf_path, degrees_of_rotation)
@@ -248,6 +252,7 @@ def process_sample(index,pdf_path, database_name, table_name, corenlp_ptr, degre
 	find_dates(text,compiled_DDMMYYYY_date_pattern,valid_dates, DDMMYYYY=True, MMDDYYYY = False, YYYYMMDD = False )
 	find_dates(text,compiled_YYYYMMDD_date_pattern,valid_dates,DDMMYYYY= False, MMDDYYYY = False, YYYYMMDD = True)
 	find_dates(text,compiled_MMDDYYYY_date_pattern,valid_dates, DDMMYYYY= False,MMDDYYYY = True, YYYYMMDD = False)
+<<<<<<< HEAD
 	found_datetimes=[]	
 	for date in valid_dates:
 		try:
@@ -259,6 +264,11 @@ def process_sample(index,pdf_path, database_name, table_name, corenlp_ptr, degre
 	#found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
 		
 		
+=======
+	found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
+	extracted_dates = extract_dates(text)
+	found_datetimes+=extracted_dates
+>>>>>>> 5c9a82ab0759fa047aba5a4c5274fe6ec055fe43
 	"""
 	#print("PERSON list :",str(per_day_num[0]))
 	#print("CoreNLP's DATE list: ", str(per_day_num[1]))
@@ -272,11 +282,22 @@ def process_sample(index,pdf_path, database_name, table_name, corenlp_ptr, degre
 	fp.write("{}\nTest case #{} processed: ".format(str(pdf_path),index))
 	fp.write("Person List: "+ str(per_day_num[0])+"\n\n")
 	fp.write("CoreNLP's Date List: "+ str(per_day_num[1])+"\n\n")
+	fp.write("Extracted dates with date-extractor: " + str(extracted_dates))
 	fp.write("Number list: "+ str(per_day_num[2])+"\n\n")
 	fp.write("Verified Date List: "+ str(valid_dates)+"\n\n")
 	fp.write("Valid PHN List: "+ str(PHN_identifier(per_day_num[2], compiled_PHN_pat))+"\n\n")
+<<<<<<< HEAD
 
 	db= db_interaction.make_connection_to_db(database_name, "thomas")
+=======
+	
+	#####################################################################################################
+	#combining the dates in this step
+	
+	
+	
+	db= db_interaction.make_connection_to_db(database_name, "teb8")
+>>>>>>> 5c9a82ab0759fa047aba5a4c5274fe6ec055fe43
 
 	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat),found_datetimes,per_day_num[0], "iclinic_data")
 	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, table_name)
@@ -335,23 +356,33 @@ def main():
 		degrees_of_rotation = 0
 	#	try:
 			
-		patient_prediction_result = process_sample(index, pdf_path, database_name, args.t, corenlp_ptr,  degrees_of_rotation, fp,
-												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+		patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr,  degrees_of_rotation, fp,
+												compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat, args.t)
 		attempt=1
 		degrees_of_rotation+=180
 			#if we were unable to find any matches at all, then the document may need to be rotated 180 degrees, so do it and try again
+<<<<<<< HEAD
 		"""
 		while patient_prediction_result[0]=="F" and attempt<2:
 			print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
 			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
 			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp,
 			 compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+=======
+		while patient_prediction_result[0]=="F" and attempt<2:
+			print("Rotation Attempt # {}. Failed to find a patient match, rotating and retrying... current rotation = {}".format(str(attempt),str(degrees_of_rotation)))
+			fp.write("\n\n\nFailed to find a database match. Attempting to rotate the pdf and repeat the process\n\n")
+			patient_prediction_result = process_sample(index, pdf_path, database_name, corenlp_ptr, degrees_of_rotation, fp, compiled_DDMMYYYY_date_pattern,compiled_YYYYMMDD_date_pattern,compiled_MMDDYYYY_date_pattern,compiled_PHN_pat)
+>>>>>>> 5c9a82ab0759fa047aba5a4c5274fe6ec055fe43
 			degrees_of_rotation +=90
 			
 			if attempt== 2:
 				degrees_of_rotation -=270
 			attempt+=1
+<<<<<<< HEAD
 		"""
+=======
+>>>>>>> 5c9a82ab0759fa047aba5a4c5274fe6ec055fe43
 		fp.close()
 		gc.collect()
 		print("Patient Prediction Rating: ", str(patient_prediction_result[0]))
