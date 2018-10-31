@@ -59,7 +59,7 @@ for result in results:
 		continue
 print(str(results_dict.items()))
 
-fp=open("analysis_of_{}.txt".format(args.folder),"w")
+fp=open("Oct31-2_analysis_of_{}.txt".format(args.folder),"w")
 fp.write("""Results Dictionary:
 A matches: {}
 B matches: {}

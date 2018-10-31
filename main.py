@@ -158,6 +158,7 @@ Input: -list of identified numbers from the document
 
 def PHN_identifier(num_list, regex_pattern):
 	temp_list =[re.search(regex_pattern, element).group(0).replace(u"\xa0","") for element in num_list if re.search(regex_pattern, element)]
+	temp_list = [(''.join(i for i in s if i.isdigit())) for s in temp_list]
 	temp_set = set(temp_list)
 	temp_list = list(temp_set)
 	return temp_list 
@@ -291,12 +292,13 @@ def process_sample(index,pdf_path, database_name, table_name, system_username, c
 	#This patient prediction is the variable which should be used to determine where the sample gets filed
 	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results))
 	
-	fp.write("\nPatient Hypothesis: " + str(patient_prediction_result)+"at {} degrees of rotation".format(str(degrees_of_rotation)))
+	fp.write("\nPatient Hypothesis: " + str(patient_prediction_result)+" for {}".format(str(pdf_path)))
 	fp.write("\nA: Matches crossreferencing the PHN vs DOB vs partial found names\n" + str(PHN_vs_DOB_vs_partial_name_results))
 	fp.write("\nB: Matches crossreferencing the PHN vs DOB:\n" + str(PHN_vs_DOB_results))
 	fp.write("\nC: Matches crossreferencing the PHN vs partial found names:\n" + str(PHN_vs_partial_name_results))
 	fp.write("\nD: Matches crossreferencing the DOB vs partial found names:\n" + str(DOB_vs_partial_name_results))
 	fp.write("\n Matches found using only DOB: " + str(db_interaction.DOB_query(db,found_datetimes,table_name)))
+	fp.write("\n\n\n TEXT EXTRACTED: " + text)
 	fp.close()
 	return patient_prediction_result
 
@@ -335,6 +337,8 @@ def main():
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
 	
 	for index,pdf_path in enumerate(pdf_list):
+		if index<25:
+			continue
 		print("processing sample #:",str(index))
 		fp = open("{}/{}.txt".format(args.of,index), "w")
 		copyfile(pdf_path, "Test_Results/{}.pdf".format(index))
