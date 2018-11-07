@@ -146,6 +146,7 @@ def annotate_ner_with_corenlp(text, corenlp_ptr):
 	names_found = create_list_from_annotations(corenlp_ptr.ner(text),"PERSON")
 	
 	dates_found = create_list_from_annotations(corenlp_ptr.ner(text),"DATE")
+	
 	numbers_found = create_list_from_annotations(corenlp_ptr.ner(text),"NUMBER")
 	#print ("Parse:", sNLP.parse(text),'\n')
 	#print ("Dep Parse:", sNLP.dependency_parse(text),'\n')

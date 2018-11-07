@@ -14,7 +14,7 @@ with that server, returning the output of the annotations.
 
 The following command will start the server, from inside the corenlp folder:
 
-java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,ssplit,pos,lemma,parse,ner" -port 9000 -timeout 30000
+java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -annotators "tokenize,ssplit,pos,lemma,parse,ner" -port 9000 -timeout 500000
 
 PROGRAM FLOW:
 
@@ -82,14 +82,26 @@ def get_pdf_paths(directory_name, pdf_paths = []):
 			print("directory: " + file_name)
 			pdf_paths =get_pdf_paths(os.path.join(directory_name,file_name),pdf_paths)
 	return pdf_paths
+
 """
-strip_dates: to be used when given a list of potential dates
-input: date_list= a list of found dates from the CoreNLP NER engine. can be in multiple different formats, and can contain extra numbers or characters
-	   regex_pattern= a pre-compiled regex pattern which is used to filter out any "dates" retreived that aren't valid DOB candidates due to format, relative dating, etc..
-	   valid_dates= a list of dates which have already been determined valid
-	   DDMMYYYY = boolean value which determines the format of the regex pattern passed in, letting us know hot to  convert the found date into datetime format (ISO 8601)
-	   YYYYMMDD = ^^ 
+Function:
+Input: -list of identified numbers from the document
+	   -regex pattern we are going to use to find a match
+	   -list to mutate
+	   
 """
+def PHN_identifier(num_list, regex_pattern):
+	temp_list =[re.search(regex_pattern, element).group(0).replace(u"\xa0","") for element in num_list if re.search(regex_pattern, element)]
+	temp_list = [(''.join(i for i in s if i.isdigit())) for s in temp_list]
+	temp_set = set(temp_list)
+	temp_list = list(temp_set)
+	return temp_list 
+	#Notes on the regex pattern:
+	#so we would prioritize finding an entire PHN with no spaces/etc in it, represented by the \d{10}
+	#then we allow 10 occurences o	f a digit and any other delimiting character that is not a number or a new line
+	#but also with a negative lookahead, so it will not match if there is a digit occuring after this second half of the or statement
+	# prioritizing matches which have fewer delimiting characters
+	
 def strip_dates(date_list, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 	# pattern DDMMYYYY_date_strip should strip away any unnecessary numbers, before or after a date.
 	#ie: "2 1995 May-10" could be annotated as a date if the OCR recognized "Page 2 1995 May-10" in the pdf
@@ -104,8 +116,9 @@ def strip_dates(date_list, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDY
 
 	if DDMMYYYY:
 		#print("DDMMYYYY")
+		print(str(valid_dates))
 		[valid_dates.append((re.search(regex_pattern, element).group(4),month_dict[re.search(regex_pattern, element).group(3)],regex_pattern.search(element).group(2))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict)]
-		#print(str(valid_dates))
+
 	elif YYYYMMDD:
 		#print("YYYYMMDD")
 		[valid_dates.append((re.search(regex_pattern, element).group(2),month_dict[re.search(regex_pattern, element).group(3)],regex_pattern.search(element).group(4))) for element in date_list if (re.search(regex_pattern, element) and re.search(regex_pattern, element).group(3) in month_dict) ]
@@ -148,26 +161,7 @@ def find_dates(text, regex_pattern,valid_dates, DDMMYYYY, YYYYMMDD , MMDDYYYY):
 	
 	return valid_dates
 
-"""
-Function:
-Input: -list of identified numbers from the document
-	   -regex pattern we are going to use to find a match
-	   -list to mutate
-	   
-"""
 
-def PHN_identifier(num_list, regex_pattern):
-	temp_list =[re.search(regex_pattern, element).group(0).replace(u"\xa0","") for element in num_list if re.search(regex_pattern, element)]
-	temp_list = [(''.join(i for i in s if i.isdigit())) for s in temp_list]
-	temp_set = set(temp_list)
-	temp_list = list(temp_set)
-	return temp_list 
-	#Notes on the regex pattern:
-	#so we would prioritize finding an entire PHN with no spaces/etc in it, represented by the \d{10}
-	#then we allow 10 occurences o	f a digit and any other delimiting character that is not a number or a new line
-	#but also with a negative lookahead, so it will not match if there is a digit occuring after this second half of the or statement
-	# prioritizing matches which have fewer delimiting characters
-	
 	"""
 Function: patient_hypothesis(matches)	
 INPUT:
@@ -180,11 +174,10 @@ OUTPUT:
 	status = "Multiple Matches of X" or ""
 		
 	"""
-
 def patient_hypothesis(matches):
 	#if there is at least one match, then find the highest rating match(es) and return them as the most likely patient
 	#print(str(matches))
-	if matches[0] or matches[1] or matches[2] or matches[3]:
+	if matches[0] or matches[1] or matches[2] or matches[3] or matches[4]:
 		if matches[0] and len(matches[0])!=0:
 			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[0]]))
 			if len(highest_matches)>1:
@@ -210,6 +203,14 @@ def patient_hypothesis(matches):
 				return ("Multiple D Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[3]]))))
 			else:
 				return ("D",str(highest_matches[0]))
+		elif matches[4] and len(matches[4])!=0:
+			highest_matches = list(set([(element[0],element[1],element[2],element[3]) for element in matches[4]]))
+			if len(highest_matches)>1:
+				print(str(matches[4].getresult()))
+				return ("Multiple E Matches",str(list(set([(element[0],element[1],element[2],element[3]) for element in matches[4]]))))
+			else:
+				return ("E",str(highest_matches[0]))
+		
 		else:
 			return ("F",None)
 	
@@ -256,7 +257,8 @@ def process_sample(index,pdf_path, database_name, table_name, system_username, c
 				found_datetimes.append(datetime.date(int(date[0]),int(date[1]),int(date[2])))
 		except Exception:
 			continue
-	#found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
+	
+	found_datetimes = [datetime.date(int(date[0]),int(date[1]),int(date[2])) for date in valid_dates if 0<int(date[1])<13 and 0<int(date[2])<32 and 1900 < int(date[0])< 2018]
 	extracted_dates = date_extractor.extract_dates(text)
 	extracted_dates = [dt.date() for dt in extracted_dates if dt]
 	found_datetimes+= extracted_dates
@@ -283,14 +285,15 @@ def process_sample(index,pdf_path, database_name, table_name, system_username, c
 	#####################################################################################################
 	#combining the dates in this step
 	
-
-	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes,per_day_num[0], "iclinic_data")
+	
+	PHN_vs_DOB_vs_partial_name_results =db_interaction.PHN_vs_DOB_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes,per_day_num[0], table_name)
 	PHN_vs_DOB_results = db_interaction.PHN_vs_DOB_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), found_datetimes, table_name)
 	PHN_vs_partial_name_results = db_interaction.PHN_vs_partial_name_query(db, PHN_identifier(per_day_num[2],compiled_PHN_pat), per_day_num[0], table_name)
 	DOB_vs_partial_name_results = db_interaction.DOB_vs_partial_name_query(db, found_datetimes, per_day_num[0], table_name)
-
+	
 	#This patient prediction is the variable which should be used to determine where the sample gets filed
-	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results))
+	################################################################################################################################################## THERES A NONE HERE TO REPRESENT POSSIBLE BOTTOM UP MATCHES
+	patient_prediction_result = patient_hypothesis((PHN_vs_DOB_vs_partial_name_results,PHN_vs_DOB_results,PHN_vs_partial_name_results,DOB_vs_partial_name_results,None))
 	
 	fp.write("\nPatient Hypothesis: " + str(patient_prediction_result)+" for {}".format(str(pdf_path)))
 	fp.write("\nA: Matches crossreferencing the PHN vs DOB vs partial found names\n" + str(PHN_vs_DOB_vs_partial_name_results))
@@ -337,7 +340,7 @@ def main():
 	runtime_fp = open("Test_Results/Runtime.txt", "w")
 	
 	for index,pdf_path in enumerate(pdf_list):
-		if index<25:
+		if index<19:
 			continue
 		print("processing sample #:",str(index))
 		fp = open("{}/{}.txt".format(args.of,index), "w")
@@ -368,3 +371,13 @@ def main():
 
 if __name__ == "__main__":
 	main()
+	
+#################################################################OBSOLETE FUCNTIONS	
+"""
+strip_dates: to be used when given a list of potential dates
+input: date_list= a list of found dates from the CoreNLP NER engine. can be in multiple different formats, and can contain extra numbers or characters
+	   regex_pattern= a pre-compiled regex pattern which is used to filter out any "dates" retreived that aren't valid DOB candidates due to format, relative dating, etc..
+	   valid_dates= a list of dates which have already been determined valid
+	   DDMMYYYY = boolean value which determines the format of the regex pattern passed in, letting us know hot to  convert the found date into datetime format (ISO 8601)
+	   YYYYMMDD = ^^ 
+"""
