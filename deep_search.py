@@ -18,7 +18,33 @@ generate_variance_patterns(target list):
 	return list_of_phn_string_patterns
 	
 """
+"""
+code in bottoms-up.py
+list_of_phn_string_patterns = []
 
+#BUILDING THE PHN REGEX PATTERNS TO ALLOW ONE CHARACTER OF VARIANCE
+for index, char in enumerate(string):
+	#print (str(index)+ " "+char)
+	new_string = string[0:index] + "*" + string[index+1:]
+	list_of_phn_string_patterns.append(new_string)
+
+connection_ptr = psycopg2.connect("dbname=test_patients user=thomas")
+table_name = 'fax_test_1'
+
+#QUERYING DATABASE FOR THE PHN FOUND
+with connection_ptr.cursor() as curs:
+	curs.execute("Select * from {} where {}.phn='{}';".format(table_name,table_name,string))
+	ret = curs.fetchone()
+	print(ret)
+	
+#NOW WE HAVE THE FIRST AND LAST NAME OF POTENTIAL PATIENT MATCHES
+f = ret[1]
+l = ret[2]
+print("%r"%list_of_phn_string_patterns[0])
+
+
+print(str(re.search(re.compile(list_of_phn_string_patterns[0]),text)))
+"""
 
 
 
