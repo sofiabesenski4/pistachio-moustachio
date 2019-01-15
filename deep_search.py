@@ -13,6 +13,14 @@ patient_names = check db for patients with that phn and return first and last na
 if input is DOB
 patient_names = check db for patients with that DOB and return furst and last name
 
+PSEUDOCODE:
+	search_dob(datetime DOB):
+		
+	
+	
+	search_phn(string PHN):
+	
+	
 
 
 """
@@ -22,7 +30,8 @@ import datetime
 from psycopg2 import sql
 import psycopg2
 #THIS IS THE MAIN FUNCTION AT WORK IN THE MODULE
-"""input:
+"""
+INPUT:
 clue: either a DOB or PHN which we want to investigate in the text,
 text: the text body which we are trying to find out the patient subject of
 database_name: the database name to query
@@ -57,7 +66,18 @@ def phn_search(clue, text, conn_ptr, table_name, username):
 	orginal_names = PHN_query(clue, conn_ptr, table_name)
 	return None
 
+"""PSEUDO: input DOB
+A = list of patient names corresponding to a given DOB in the database
+B= list of patient PHNs corresponding to a given DOB in the db
 
+
+Search for unaltered names
+
+
+Search for 1 char off names
+
+
+"""
 def dob_search(clue, text, conn_ptr, table_name, username):
 	results = DOB_query(clue,conn_ptr,table_name)
 	original_names = results[0]
@@ -84,9 +104,14 @@ def dob_search(clue, text, conn_ptr, table_name, username):
 	print("searching with 1 wildcard")
 	names_found_var_1 = scan_for_patterns(variance_1_name_patterns,text)
 	phns_found_var_1 = scan_for_patterns(variance_1_phn_patterns,text)
-	[print("name found: " + str(element.group(0))) for element in names_found_var_1 if element]
-	[print("phn found: " + str(element.group(0))) for element in phns_found_var_1 if element]
+	names_found = [element.group(0) for element in names_found_var_1 if element]
+	phns_found = [element.group(0) for element in phns_found_var_1 if element]
+	
+	[print("name found: " + str(element)) for element in names_found_var_1 if element]
+	[print("phn found: " + str(element)) for element in phns_found_var_1 if element]
 
+	if not names_found==None or not phns_found==None:
+		return (names_found,phns_found)
 	return None
 
 def PHN_query(target_phn, conn_ptr, table_name):
@@ -143,11 +168,13 @@ def main():
 	test_dob=datetime.date(year=1994,month=10,day=4)
 	args = ap.parse_args()
 	text = "Robbi smith blahblahblah 124"
-	print("searching via PHN")
+	
+	"""
 	deep_search('123', text, args.db , args.t, args.u)
 	print("searching via DOB")
 	print(str(datetime.date(year=1994,month=10,day=4)))
 	deep_search(test_dob, text, args.db , args.t, args.u)
+	"""
 
 if __name__ == "__main__":
 	main()
