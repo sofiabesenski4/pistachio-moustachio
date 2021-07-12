@@ -21,7 +21,9 @@ Each txt file contains the encountered "person" names in the pdf document, in or
 followed by a "#####reached EOF or error occured#####" symbolizing the EOF.
 A single line is generated after that line, specifying the hypothesized name of the patient discussed 
 in the pdf medical letter. 
-The hypothesis is based on a intuitive heuristic which assigns the patient name based on the most frequently
-occuring name found in the pdf.
+The hypothesis is based on a intuitive heuristic which assigns the patient name based on the the highest number of the following fields matching in the pdf:
+  -Patient first or last name
+  -Personal Health Number 
+  -Date of Birth
 
 The heuristic may not always be accurate, so there is room for improvement here.
